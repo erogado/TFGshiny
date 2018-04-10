@@ -18,7 +18,7 @@ library(bootstrap)
 
 ui <- fluidPage(theme = shinytheme("sandstone"),
                 
-                navbarPage("Appstatistics",
+                navbarPage("App Statistics",
                            
                            tabPanel("Datos",
                                     
