@@ -15,10 +15,11 @@ library(mice)
 library(nortest)
 library(boot)
 library(bootstrap)
+library(stats)
 
 ui <- fluidPage(theme = shinytheme("sandstone"),
                 
-                navbarPage("App Statistics",
+                navbarPage("Appstatistics",
                            
                            tabPanel("Datos",
                                     
@@ -642,7 +643,64 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                       ) # Fin mainPanel Contrastes
                                     ) # Fin sidebarLayout Contrastes
                                     
-                           ) # Fin del tabPanel Contrastes
+                           ), # Fin del tabPanel Contrastes
+                           
+                           tabPanel("Analisis multivariante",
+                                    
+                                    tabsetPanel(
+                                      tabPanel("Analisis cluster",
+                                                sidebarLayout(
+                                                  
+                                                  sidebarPanel(width = 2,
+                                                               
+                                                               radioButtons("tip_cluster", "Elegir el tipo de cluester:",
+                                                                            c("Cluster k-means" = "c_kmeans", 
+                                                                              "Cluster jerarquico" = "c_jerarquico"), 
+                                                                            selected = NULL, inline = T),
+                                                               
+                                                               conditionalPanel(condition = "input.tip_cluster == 'c_kmeans'", ""),
+                                                               
+                                                               conditionalPanel(condition = "input.tip_cluster == 'c_jerarquico'", 
+                                                                                
+                                                                                
+                                                                                checkboxInput("col_clus", "Hacer cluster de las columnas", value = T),
+                                                                                
+                                                                                checkboxInput("fil_clus", "Hacer cluster de las filas", value = F),
+                          
+                                                                                selectInput("usa_distancia", "Distancia a usar:",
+                                                                                            c("euclidean" = "euclidean",
+                                                                                              "maximum" = "maximum", 
+                                                                                              "manhattan" = "manhattan",
+                                                                                              "canberra" = "canberra",
+                                                                                              "binary" = "binary",
+                                                                                              "minkowski" = "minkowski")),
+                                                                          
+                                                                                selectInput("usa_cluster", "Cluster a aplicar:",
+                                                                                            c("ward.D2" = "ward.D2",
+                                                                                              "single" = "single", 
+                                                                                              "complete" = "complete",
+                                                                                              "average" = "average",
+                                                                                              "mcquitty" = "mcquitty",
+                                                                                              "median" = "median",
+                                                                                              "centroid" = "centroid")),
+                                                                                
+                                                                                
+                                                                                helpText("Seleccionar el numero de agrupamientos"),
+                                                                                numericInput("usa_agrupamientos", "Seleccionar agrupamientos:", value = NULL, min = 2, max = 15),
+                                                                                actionButton("dibujar_agrup", "Dibujar"))
+                                                               
+                                                                                ), # Fin sidebarPanel Analisis cluster
+                                                  mainPanel(
+                                                    conditionalPanel(condition = "input.tip_cluster == 'c_jerarquico'",
+                                                                     h4("Visualizacion de los grupos"),
+                                                                     verbatimTextOutput("grupos"), br(),
+                                                                     h4("Grafico del cluster"),
+                                                                     plotOutput("cluster_jer"))
+                                                  ) # Fin mainPanel Analisis cluster
+                                                ) # Fin del sidebarLayout Analisis cluster
+                                        ) # Fin del tabPanel Cluster
+                                    ) #??? Fin del tabsetPanel Analisis multivariante
+                       ) #??? Fin del tabPanel Analisis multivariante
                            
                 ) # Fin navbarPage
 ) # Fin fluidPage
@@ -1686,6 +1744,27 @@ server <- function(input, output) {
     
     var.test(datos()[,input$selectvar1],datos()[,input$selectvar2])    
     
+  })
+  
+
+  output$grupos = renderPrint({
+    
+    if(input$fil_clus == T){distancia = dist(datos(), method = input$usa_distancia); distancia}else{NULL}
+    if(input$col_clus == T){distancia = dist(t(scale(datos())), method = input$usa_distancia); distancia}else{NULL}
+    distancia
+    
+  })
+  
+  output$cluster_jer = renderPlot({
+    
+    if(input$fil_clus == T){distancia = dist(datos(), method = input$usa_distancia); distancia}else{NULL}
+    if(input$col_clus == T){distancia = dist(t(scale(datos())), method = input$usa_distancia); distancia}else{NULL}
+    distancia
+    fit = hclust(distancia, method = input$usa_cluster)
+    plot(fit,  cex = 0.7) 
+    
+    if(input$dibujar_agrup == T){plot(fit,  cex = 0.7); rect.hclust(fit, k = input$usa_agrupamientos, border="red")}else{plot(fit,  cex = 0.7)}
+
   })
   
 }
