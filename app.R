@@ -16,6 +16,7 @@ library(nortest)
 library(boot)
 library(bootstrap)
 library(stats)
+library(corrplot)
 
 ui <- fluidPage(theme = shinytheme("sandstone"),
                 
@@ -648,59 +649,170 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                            tabPanel("Analisis multivariante",
                                     
                                     tabsetPanel(
+                                      
+                                      tabPanel("Regresion lineal multiple",
+                                               
+                                               sidebarLayout(
+                                                 sidebarPanel(width = 2,
+                                                              
+                                                              checkboxInput("corr", "Matriz y test de correlaciones"),
+                                                              
+                                                              uiOutput("rm_dep"), uiOutput("rm_Vars"), hr(),
+                                                              
+                                                              checkboxInput("regMul", "Resultados de la regresion"), hr(),
+                                                              
+                                                              checkboxInput("colEstu", "Estudio de la colinealidad")
+                                                              
+                                                 ), # Fin sidebarPanel regresion lineal multiple 
+                                                 mainPanel(
+                                                   
+                                                   conditionalPanel(condition = 'input.corr',
+                                                                    fluidRow(
+                                                                      column(width = 5, offset = 0.25, br(),
+                                                                             h4("Matriz de correlaciones"), 
+                                                                             plotOutput("corrPlot")),
+                                                                      
+                                                                      column(width = 5, offset = 0.25, br(),
+                                                                             h4("Test de correlacion de Pearson"),
+                                                                             verbatimTextOutput("corrTestPear")),
+                                                                      
+                                                                      column(width = 2, offset = 0.25, br(),
+                                                                             uiOutput("vxCorr"),
+                                                                             uiOutput("vyCorr"))
+                                                                    )),
+                                                   
+                                                   conditionalPanel(condition = 'input.regMul',
+                                                                    fluidRow(
+                                                                      column(width = 5, offset = 0.25, br(),
+                                                                             h4("Summary de la regresion"),
+                                                                             verbatimTextOutput("sumRegMul")),
+                                                                      
+                                                                      column(width = 5, offset = 0.25, br(),
+                                                                             h4("Intervalos de confianza"),
+                                                                             verbatimTextOutput("ICregMul"))
+                                                                    )),
+                                                   
+                                                   conditionalPanel(condition = 'input.colEstu',
+                                                                    fluidRow(
+                                                                      column(width = 5, offset = 0.25, br(),
+                                                                             h4("Factor de inflaccion de la varianza"),
+                                                                             verbatimTextOutput("FIV")),
+                                                                      
+                                                                      column(width = 5, offset = 0.25, br(),
+                                                                             h4("Numero de condicion"),
+                                                                             verbatimTextOutput("NC"))
+                                                                    ))
+                                                   
+                                                 ) # Fin mainPanel regresion lineal multiple
+                                               ) # Fin sidebarLayout Regresion lineal multiple
+                                               
+                                      ), # Fin tabPanel Regresion lineal multiple
+                                      
                                       tabPanel("Analisis cluster",
-                                                sidebarLayout(
-                                                  
-                                                  sidebarPanel(width = 2,
-                                                               
-                                                               radioButtons("tip_cluster", "Elegir el tipo de cluester:",
-                                                                            c("Cluster k-means" = "c_kmeans", 
-                                                                              "Cluster jerarquico" = "c_jerarquico"), 
-                                                                            selected = NULL, inline = T),
-                                                               
-                                                               conditionalPanel(condition = "input.tip_cluster == 'c_kmeans'", ""),
-                                                               
-                                                               conditionalPanel(condition = "input.tip_cluster == 'c_jerarquico'", 
-                                                                                
-                                                                                
-                                                                                checkboxInput("col_clus", "Hacer cluster de las columnas", value = T),
-                                                                                
-                                                                                checkboxInput("fil_clus", "Hacer cluster de las filas", value = F),
-                          
-                                                                                selectInput("usa_distancia", "Distancia a usar:",
-                                                                                            c("euclidean" = "euclidean",
-                                                                                              "maximum" = "maximum", 
-                                                                                              "manhattan" = "manhattan",
-                                                                                              "canberra" = "canberra",
-                                                                                              "binary" = "binary",
-                                                                                              "minkowski" = "minkowski")),
-                                                                          
-                                                                                selectInput("usa_cluster", "Cluster a aplicar:",
-                                                                                            c("ward.D2" = "ward.D2",
-                                                                                              "single" = "single", 
-                                                                                              "complete" = "complete",
-                                                                                              "average" = "average",
-                                                                                              "mcquitty" = "mcquitty",
-                                                                                              "median" = "median",
-                                                                                              "centroid" = "centroid")),
-                                                                                
-                                                                                
-                                                                                helpText("Seleccionar el numero de agrupamientos"),
-                                                                                numericInput("usa_agrupamientos", "Seleccionar agrupamientos:", value = NULL, min = 2, max = 15),
-                                                                                actionButton("dibujar_agrup", "Dibujar"))
-                                                               
-                                                                                ), # Fin sidebarPanel Analisis cluster
-                                                  mainPanel(
-                                                    conditionalPanel(condition = "input.tip_cluster == 'c_jerarquico'",
-                                                                     h4("Visualizacion de los grupos"),
-                                                                     verbatimTextOutput("grupos"), br(),
-                                                                     h4("Grafico del cluster"),
-                                                                     plotOutput("cluster_jer"))
-                                                  ) # Fin mainPanel Analisis cluster
-                                                ) # Fin del sidebarLayout Analisis cluster
-                                        ) # Fin del tabPanel Cluster
+                                               sidebarLayout(
+                                                 
+                                                 sidebarPanel(width = 2,
+                                                              
+                                                              radioButtons("tip_cluster", "Elegir el tipo de cluester:",
+                                                                           c("Cluster k-means" = "c_kmeans", 
+                                                                             "Cluster jerarquico" = "c_jerarquico"), 
+                                                                           selected = NULL, inline = T),
+                                                              
+                                                              conditionalPanel(condition = "input.tip_cluster == 'c_kmeans'", 
+                                                                               
+                                                                               uiOutput("varX_clus"), uiOutput("varY_clus"),
+                                                                               
+                                                                               checkboxInput("dscale", "Escalar los datos"),
+                                                                               
+                                                                               checkboxInput("vis_var", "Visualizar la variabilidad de los datos"),
+                                                                               
+                                                                               numericInput("num_var", "Variabilidad del modelo. Desde 2 clusters hasta...", value = 1),
+                                                                               
+                                                                               numericInput("num_centros", "Seleccionar el numero de centros:", value = 1),
+                                                                               
+                                                                               numericInput("nstart", "Selecionar nstart (semillas aleatorias seleccionadas):", value = 1),
+                                                                               
+                                                                               selectInput("usa_algoritmo", "Algoritmo a usar:",
+                                                                                           c("Lloyd" = "Lloyd",
+                                                                                             "Forgy" = "Forgy")),
+                                                                               
+                                                                               actionButton("apli_kmeans", "Aplicar algoritmo:")),
+                                                              
+                                                              
+                                                              conditionalPanel(condition = "input.tip_cluster == 'c_jerarquico'", 
+                                                                               
+                                                                               checkboxInput("col_clus", "Hacer cluster de las columnas", value = T),
+                                                                               
+                                                                               checkboxInput("fil_clus", "Hacer cluster de las filas", value = F),
+                                                                               
+                                                                               selectInput("usa_distancia", "Distancia a usar:",
+                                                                                           c("euclidean" = "euclidean",
+                                                                                             "maximum" = "maximum", 
+                                                                                             "manhattan" = "manhattan",
+                                                                                             "canberra" = "canberra",
+                                                                                             "binary" = "binary",
+                                                                                             "minkowski" = "minkowski")),
+                                                                               
+                                                                               selectInput("usa_cluster", "Cluster a aplicar:",
+                                                                                           c("ward.D2" = "ward.D2",
+                                                                                             "single" = "single", 
+                                                                                             "complete" = "complete",
+                                                                                             "average" = "average",
+                                                                                             "mcquitty" = "mcquitty",
+                                                                                             "median" = "median",
+                                                                                             "centroid" = "centroid")),
+                                                                               
+                                                                               
+                                                                               helpText("Seleccionar el numero de agrupamientos"),
+                                                                               numericInput("usa_agrupamientos", "Seleccionar agrupamientos:", value = NULL, min = 2, max = 15),
+                                                                               actionButton("dibujar_agrup", "Dibujar"))
+                                                              
+                                                 ), # Fin sidebarPanel Analisis cluster
+                                                 mainPanel(
+                                                   conditionalPanel(condition = "input.tip_cluster == 'c_jerarquico'",
+                                                                    
+                                                                    fluidRow(
+                                                                      column(width = 12, offset = 2,
+                                                                             h4("Visualizacion de los grupos"),
+                                                                             verbatimTextOutput("grupos")),
+                                                                      
+                                                                      br(),
+                                                                      
+                                                                      column(width = 6, offset = 2,
+                                                                             h4("Grafico del cluster"),
+                                                                             plotOutput("cluster_jer"))
+                                                                    )),
+                                                   
+                                                   conditionalPanel(condition = "input.tip_cluster == 'c_kmeans'",
+                                                                    
+                                                                    fluidRow(
+                                                                      
+                                                                      column(width = 12, offset = 1.5,
+                                                                             h4("Variabilidad de los datos"),
+                                                                             verbatimTextOutput("var_dat"))),
+                                                                    
+                                                                    br(),
+                                                                    
+                                                                    fluidRow(
+                                                                      
+                                                                      column(width = 6, offset = 0.5,
+                                                                             h4("Grafico Clusters vs Varianza"),
+                                                                             plotlyOutput("grafico_codo")),
+                                                                      
+                                                                      br(),
+                                                                      
+                                                                      column(width = 6, offset = 0.5,
+                                                                             h4("Cluster k-means"),
+                                                                             plotlyOutput("cluster_kmeans")))
+                                                                    
+                                                   ) # Fin conditionalPanel kmeans
+                                                 ) # Fin mainPanel Analisis cluster
+                                               ) # Fin del sidebarLayout Analisis cluster
+                                      ) # Fin del tabPanel Cluster
+                                      
+                                      
                                     ) #??? Fin del tabsetPanel Analisis multivariante
-                       ) #??? Fin del tabPanel Analisis multivariante
+                           ) #??? Fin del tabPanel Analisis multivariante
                            
                 ) # Fin navbarPage
 ) # Fin fluidPage
@@ -1089,14 +1201,14 @@ server <- function(input, output) {
       ylab("Recuentos") +
       theme_bw()
     
-  })
+  }) # Plot recuentos 1
   output$plot_v2 = renderPlotly({
     
     r = range(datos()[,input$varInd2])
     cs = nclass.Sturges(datos()[,input$varInd2])
     li = seq(r[1], r[2], length = cs)
     
-    intervalos = cut(datos()[,input$varInd1], breaks = li, include.lowest = T)
+    intervalos = cut(datos()[,input$varInd2], breaks = li, include.lowest = T)
     
     int = data.frame(table(intervalos)); colnames(int) = c("Intervalos", "Frecuencia")
     
@@ -1107,7 +1219,7 @@ server <- function(input, output) {
       ylab("Recuentos") +
       theme_bw()
     
-  })
+  }) # Plot recuentos 2
   
   
   
@@ -1746,7 +1858,7 @@ server <- function(input, output) {
     
   })
   
-
+  
   output$grupos = renderPrint({
     
     if(input$fil_clus == T){distancia = dist(datos(), method = input$usa_distancia); distancia}else{NULL}
@@ -1764,8 +1876,184 @@ server <- function(input, output) {
     plot(fit,  cex = 0.7) 
     
     if(input$dibujar_agrup == T){plot(fit,  cex = 0.7); rect.hclust(fit, k = input$usa_agrupamientos, border="red")}else{plot(fit,  cex = 0.7)}
-
+    
   })
+  
+  
+  output$varX_clus = renderUI({
+    selectInput("varXclus", "Seleccionar variable X:",
+                choices = names(datos()),
+                selected = 1)
+  })
+  output$varY_clus = renderUI({
+    selectInput("varYclus", "Seleccionar variable Y:",
+                choices = names(datos()),
+                selected = 1)
+  })
+  
+  
+  datos_sc = eventReactive(input$dscale, {
+    data.frame(scale(datos()))
+  })
+  
+  variabilidad = reactive({
+    
+    wss = (nrow(datos_sc()) - 1)*sum(apply(datos_sc(), 2, var))
+    for (i in 2:input$num_var) wss[i] <- sum(kmeans(datos_sc(), centers = i)$withinss)
+    wss
+    
+  })
+  
+  output$var_dat = renderPrint({
+    variabilidad()
+  })
+  
+  output$grafico_codo = renderPlotly({
+    
+    wss = cbind.data.frame(Clusters = c(1:input$num_var), Varianza = variabilidad())
+    ggplot(wss, aes(x = Clusters, y = Varianza, group = 1)) +
+      geom_point(stat = 'summary', fun.y = sum, col = "steelblue4", size = 1.25) +
+      stat_summary(fun.y = sum, geom = "line", col = "steelblue4", size = 0.5) +
+      theme_bw()
+  })
+  
+  km = eventReactive(input$apli_kmeans, {
+    
+    if(input$dscale == T){
+      km2 = kmeans(datos_sc(), centers = input$num_centros, nstart = input$nstart,  algorithm = input$usa_algoritmo)}
+    else{km2 = kmeans(datos(), centers = input$num_centros, nstart = input$nstart,  algorithm = input$usa_algoritmo)}
+    
+    km2$cluster = as.factor(km2$cluster) 
+    km2$cluster
+    
+  })
+  
+  
+  
+  output$cluster_kmeans = renderPlotly({
+    
+    if(input$apli_kmeans == T){
+      p = ggplot(datos(), aes(x = input$varXclus, y = input$varYclus, color = km())) 
+      p + geom_point() + theme_bw()}else{NULL}
+    
+  }) # Hay que revisarlo
+  
+  
+  
+  output$vxCorr = renderUI({
+    selectInput("vx_Corr", "Seleccionar variable X:",
+                choices = names(datos()),
+                selected = 1)
+  }) 
+  output$vyCorr = renderUI({
+    selectInput("vy_Corr", "Seleccionar variable Y:",
+                choices = names(datos()),
+                selected = 1)
+  })
+  
+  output$corrTestPear = renderPrint({
+    
+    cor.test(datos()[,input$vx_Corr],datos()[,input$vy_Corr])    
+    
+  })
+  output$corrPlot = renderPlot({
+    corrplot(cor(datos()), method = "number")
+  })
+  
+  output$rm_dep = renderUI({
+    selectInput("rmDep", "Seleccionar variable dependiente:",
+                choices = names(datos()),
+                selected = 1)
+  }) # Variable y RLM
+  output$rm_Vars = renderUI({
+    checkboxGroupInput("rmVars", "Seleccionar variables independientes:", 
+                       choices = names(datos()), selected = NULL)
+  }) # Variables x RLM
+  
+  datReg = reactive({
+    
+    dep = datos()[,input$rmDep]; colnames(dep) = colnames(datos()[,input$rmDep])
+    ind = datos()[,input$rmVars]; colnames(ind) = colnames(datos()[,input$rmVars])
+    
+    dReg = cbind.data.frame(dep, ind)
+    
+  })
+  
+  regMul = reactive({
+    lm(dep ~ ., datReg())
+  })
+  
+  output$sumRegMul = renderPrint({
+    
+    summary(regMul())
+    
+  })
+  output$ICregMul = renderPrint({
+    
+    confint(regMul())
+    
+  })
+  
+  output$FIV = renderPrint({
+    
+    FIV_ <- function(X){
+      
+      observaciones = dim(X)[1]
+      variables = dim(X)[2]
+      
+      fiv = array(0,variables)
+      
+      for (i in 1:variables) {
+        
+        reg_aux = lm(X[,i] ~ X[,-i])
+        R2 = as.numeric(summary(reg_aux)[8])
+        fiv[i] = 1/(1-R2)
+        
+      }
+      return(fiv)
+    }
+    
+    FIV_(as.matrix(datReg()))
+    
+  })
+  
+  output$NC = renderPrint({
+    
+    NC_ <- function(X){
+      
+      XX = crossprod(X)
+      autovalores = eigen(XX)[[1]]
+      auto_min = min(autovalores)
+      auto_max = max(autovalores)
+      nc = sqrt(auto_max/auto_min)
+      return(nc)
+      
+    }
+    
+    
+    
+    longitud_unidad <- function(X){
+      
+      observaciones = dim(X)[1]
+      variables = dim(X)[2]
+      
+      Xlu = array(,c(observaciones, variables))
+      for (i in 1:variables) {
+        for (j in 1:observaciones) {
+          Xlu[j,i] = X[j,i]/sqrt(crossprod(X[,i]))
+        }
+      }
+      return(Xlu)
+    }
+    
+    observaciones = dim(datReg())[1]
+    cte = rep(1, observaciones) 
+    matriz = cbind(cte,as.matrix(datReg())) 
+    Xlu = longitud_unidad(matriz)
+    NC_(Xlu)
+    
+  })
+  
   
 }
 
