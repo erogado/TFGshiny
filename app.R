@@ -17,6 +17,9 @@ library(boot)
 library(bootstrap)
 library(stats)
 library(corrplot)
+library(MASS)
+library(forecast)
+library(e1071)  
 
 ui <- fluidPage(theme = shinytheme("sandstone"),
                 
@@ -318,14 +321,26 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                                                                p("Pulsar el boton para annadir variable."), 
                                                                                actionButton("apli_scaleBOTON", "Aplicar"),
                                                                                actionButton("apli_scaleELIMINAR", "Eliminar")),
+                                                              br(),
                                                               
-                                                              br(), helpText("A continuacion se habilitan los controlos necesarios para visualizar
+                                                              checkboxInput("boxcox", "Transformaciones Box Cox", value = F),
+                                                              
+                                                              conditionalPanel(condition = 'input.boxcox', 
+                                                                               actionButton("apli_cox", "Aplicar")),
+                                                              
+                                                              br(), helpText("A continuacion se habilitan los controles necesarios para visualizar
                                                                              la media y la varianza poblacionales estimadas a partir de bootstrapping. 
                                                                              Tambien se proporcionan los IC"),
                                                               
                                                               checkboxInput("media_boot", "Estimar media poblacional", value = F),
+                                                             
+                                                              checkboxInput("varianza_boot", "Estimar varianza poblacional", value = F),
                                                               
-                                                              checkboxInput("varianza_boot", "Estimar varianza poblacional", value = F)
+                                                              conditionalPanel(condition = 'input.media_boot || input.varianza_boot',
+                                                                               numericInput("repli", "Replicas bootstrap", min = 500, max = 5000, value = 1000, step = 100)),
+                                                              
+                                                              conditionalPanel(condition = 'input.media_boot || input.varianza_boot',
+                                                                               numericInput("confianza", "Confianza del intervalo", min = 0.05, max = 0.95, value = 0.95, step = 0.05))
                                                               
                                                               
                                                               ), # Fin sidebarPanel Estudio normalidad
@@ -340,8 +355,8 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                                      
                                                      column(width = 5, offset = 0.5,
                                                             br(),
-                                                            h4("Test de normalidad de Kolmogorov-Smirnov"), 
-                                                            verbatimTextOutput("test_normKS"))
+                                                            h4("Test de normalidad Shapiro"), 
+                                                            verbatimTextOutput("test_normSP"))
                                                      
                                                    ), # Fin fluidRow mainPanel 
                                                    
@@ -716,7 +731,7 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                                               radioButtons("tip_cluster", "Elegir el tipo de cluester:",
                                                                            c("Cluster k-means" = "c_kmeans", 
                                                                              "Cluster jerarquico" = "c_jerarquico"), 
-                                                                           selected = NULL, inline = T),
+                                                                           selected = NULL, inline = F),
                                                               
                                                               conditionalPanel(condition = "input.tip_cluster == 'c_kmeans'", 
                                                                                
@@ -736,14 +751,14 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                                                                            c("Lloyd" = "Lloyd",
                                                                                              "Forgy" = "Forgy")),
                                                                                
-                                                                               actionButton("apli_kmeans", "Aplicar algoritmo:")),
+                                                                               actionButton("apli_kmeans", "Aplicar algoritmo")),
                                                               
+                                                             
                                                               
                                                               conditionalPanel(condition = "input.tip_cluster == 'c_jerarquico'", 
                                                                                
-                                                                               checkboxInput("col_clus", "Hacer cluster de las columnas", value = T),
-                                                                               
-                                                                               checkboxInput("fil_clus", "Hacer cluster de las filas", value = F),
+                                                                               uiOutput("var_Char"),
+                                                                          
                                                                                
                                                                                selectInput("usa_distancia", "Distancia a usar:",
                                                                                            c("euclidean" = "euclidean",
@@ -768,19 +783,21 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                                                                actionButton("dibujar_agrup", "Dibujar"))
                                                               
                                                  ), # Fin sidebarPanel Analisis cluster
+                                                 
                                                  mainPanel(
+                                                   
                                                    conditionalPanel(condition = "input.tip_cluster == 'c_jerarquico'",
                                                                     
                                                                     fluidRow(
-                                                                      column(width = 12, offset = 2,
+                                                                      
+                                                                      column(width = 12, offset = 2,  br(),
                                                                              h4("Visualizacion de los grupos"),
                                                                              verbatimTextOutput("grupos")),
                                                                       
-                                                                      br(),
-                                                                      
-                                                                      column(width = 6, offset = 2,
+                                                                     
+                                                                      column(width = 12, offset = 2,  br(),
                                                                              h4("Grafico del cluster"),
-                                                                             plotOutput("cluster_jer"))
+                                                                             plotOutput("cluster_jer",  "1000px"))
                                                                     )),
                                                    
                                                    conditionalPanel(condition = "input.tip_cluster == 'c_kmeans'",
@@ -841,7 +858,7 @@ server <- function(input, output) {
   
   datosN = reactive({
     
-    if(input$creaNorm){datos_N = cbind(normal()); datos_N}else{NULL}
+    if(input$creaNorm){datos_N = cbind(datos2(), normal()); datos_N}else{NULL}
     
   })
   
@@ -917,6 +934,26 @@ server <- function(input, output) {
       
     }else{dat}
     
+    if(!is.null(infile()) & input$apli_cox == T){
+      
+      df <- dat
+      v  <- names(df[,sapply(df, class) == "numeric"])
+      
+      for (ii in 1:length(v)){
+        asimetria = skewness(df[,v[ii]])
+        coef.variacion = sd(df[,v[ii]]) / mean(df[,v[ii]]) 
+        
+        if ((asimetria < -1 | asimetria > 1) & coef.variacion > 1){
+          print(paste("transformando variable: ", v[ii]))
+          df$bc_tmp <- BoxCox(df[,v[ii]],BoxCox.lambda(df[,v[ii]]))
+          names(df)[names(df)=="bc_tmp"] = paste("BoxCox_", v[ii], sep = "")
+        }
+      }
+      
+      df
+      
+    }else{dat}
+    
   }) # Falta meter lo que queda
   
   
@@ -932,18 +969,23 @@ server <- function(input, output) {
   )
   
   
+  # Estudio preliminar
+  
+    # SUMMARY Y CLASS
   
   output$summaryDa = renderPrint({
     
     summary(datos())
     
-  })
-  
+  }) # Summary de los datos
   output$classDa = renderPrint({
     
     sapply(datos(), class)
     
-  })
+  }) # Clase de los datos
+  
+  
+    # ESTUDIO NAS
   
   output$diagnostico_NA = renderPlot({
     
@@ -955,7 +997,8 @@ server <- function(input, output) {
       
     }else{NULL}
     
-  })
+  }) # Plot matriz diagnostico NAs
+  
   output$marginalDiagnostico_NA =renderPlot({
     
     if(input$diag_NA == T){
@@ -964,21 +1007,20 @@ server <- function(input, output) {
       
     }else{NULL}
     
-  })
+  }) # Plot diagnostico individual NAs
   
   output$selecvarXDiag_NA = renderUI({
     conditionalPanel(condition = 'input.diag_NA',
                      selectInput("selx", "Seleccionar variable X:",
                                  choices = names(datos()),
                                  selected = 1))
-  })
-  
+  }) # Variable x diagnostico individual NAs
   output$selecvarYDiag_NA = renderUI({
     conditionalPanel(condition = 'input.diag_NA',
                      selectInput("sely", "Seleccionar variable Y:",
                                  choices = names(datos()),
                                  selected = 1))
-  })
+  }) # Variable y diagnostico individual NAs
   
   
   
@@ -1025,18 +1067,30 @@ server <- function(input, output) {
   }) # Visualizador numero de obs. a eliminar 
   
   
+  # Estudio normalidad
+    
+      # TEST NORMALIDAD
   
   output$var_normalidad = renderUI({
     selectInput("selecVar_normtest", "Seleccionar variable:",
                 choices = names(datos()), selected = NULL)
   }) # Variable a estudiar la normalidad
   
+  estNorm = reactive({
+    
+    estNorm = datos()[,input$selecVar_normtest]
+    
+    estNorm = data.frame(estNorm); colnames(estNorm) = colnames(input$selecVar_normtest)
+    estNorm
+    
+  })
+  
   output$test_normPearson = renderPrint({
-    pearson.test(datos()[,input$selecVar_normtest])
+    pearson.test(estNorm()[,1])
   }) # Test de normalidad Pearson
   
-  output$test_normKS = renderPrint({
-    lillie.test(datos()[,input$selecVar_normtest])
+  output$test_normSP = renderPrint({
+    shapiro.test(estNorm()[,1])
   }) # Test de normalidad KS
   
   
@@ -1090,36 +1144,37 @@ server <- function(input, output) {
     
   }) # Tabla de escalado 2
   
+  
+
+
+  
   output$est_media = renderPrint({
     
-    medBo = bootstrap(datos()[,input$selecVar_normtest], 1000, mean)
+    medBo = bootstrap(datos()[,input$selecVar_normtest], input$repli, mean)
     mean(medBo$thetastar)
     
   }) # Media bootstrap
   output$est_varianza = renderPrint({
     
-    medBo = bootstrap(datos()[,input$selecVar_normtest], 1000, var)
+    medBo = bootstrap(datos()[,input$selecVar_normtest], input$repli, var)
     mean(medBo$thetastar)
     
   }) # Varianza bootstrap
   
-  output$ic_est_media = renderPrint({
-    
+  
+  
+  icBoot = reactive({
     mean.boot = function(x,ind){
       return(c(mean(x[ind]), var(x[ind])))
     }
-    eso = boot(datos()[,input$selecVar_normtest], mean.boot, 1000)
-    
-    boot.ci(eso, index = 1)
+    eso = boot(datos()[,input$selecVar_normtest], mean.boot, input$repli)
+    eso
+  })
+  output$ic_est_media = renderPrint({
+    boot.ci(icBoot(), index = 1, conf = input$confianza)
   }) # IC para media bootstrap 
   output$ic_est_varianza = renderPrint({
-    
-    mean.boot = function(x,ind){
-      return(c(mean(x[ind]), var(x[ind])))
-    }
-    eso = boot(datos()[,input$selecVar_normtest], mean.boot, 1000)
-    
-    boot.ci(eso, index = 2)
+    boot.ci(icBoot(), index = 2, conf = input$confianza)
   }) # IC para varianza bootstrap
   
   
@@ -1239,14 +1294,19 @@ server <- function(input, output) {
   
   output$plotdisp = renderPlotly({
     
-    p = ggplot(datos(), aes(x = datos()[,input$selectvarX], y = datos()[,input$selectvarY]))  
+    p = ggplot(datos(), aes(x = datos()[,input$selectvarX], y = datos()[,input$selectvarY])) + 
+      xlab(input$selectvarX) +
+      ylab(input$selectvarY)
     
     
     if(input$aplicarlogx == T){
       
-      p = ggplot(datos(), aes(x = log(datos()[,input$selectvarX]), y = datos()[,input$selectvarY]))  
+      p = ggplot(datos(), aes(x = log(datos()[,input$selectvarX]), y = datos()[,input$selectvarY])) + 
+        xlab(paste("log_", input$selectvarX, sep = "")) +
+        ylab(input$selectvarY)
+      
       p + geom_point(color = "navyblue", size = 1) + 
-        theme_bw()
+        theme_bw() 
       
     }else {
       
@@ -1256,7 +1316,10 @@ server <- function(input, output) {
     
     if(input$aplicarlogy == T){
       
-      p = ggplot(datos(), aes(x = datos()[,input$selectvarX], y = log(datos()[,input$selectvarY])))  
+      p = ggplot(datos(), aes(x = datos()[,input$selectvarX], y = log(datos()[,input$selectvarY]))) + 
+        ylab(paste("log_", input$selectvarY, sep = "")) +
+        xlab(input$selectvarY)  
+      
       p + geom_point(color = "navyblue", size = 1) + 
         theme_bw()
       
@@ -1268,7 +1331,10 @@ server <- function(input, output) {
     
     if(input$aplicarlogy == T & input$aplicarlogx == T){
       
-      p = ggplot(datos(), aes(x = log(datos()[,input$selectvarX]), y = log(datos()[,input$selectvarY])))  
+      p = ggplot(datos(), aes(x = log(datos()[,input$selectvarX]), y = log(datos()[,input$selectvarY])))+ 
+        xlab(paste("log_", input$selectvarX, sep = "")) +
+        ylab(paste("log_", input$selectvarY, sep = ""))
+      
       p + geom_point(color = "navyblue", size = 1) + 
         theme_bw()
       
@@ -1283,6 +1349,7 @@ server <- function(input, output) {
       p + geom_point(color = "navyblue", size = 1) + 
         geom_smooth(method = "lm",se = T, colour = "brown3", fill = 0.32) +
         theme_bw()
+      
       
     }else{
       
@@ -1323,12 +1390,36 @@ server <- function(input, output) {
                      verbatimTextOutput("summaryregLS"))
     
   }) 
-  output$summaryregLS = renderPrint({
+  
+  datRLS = reactive({
+    
+    dat = cbind.data.frame(datos()[,input$selectvarY], datos()[,input$selectvarX])
+    colnames(dat) = c(input$selectvarY, input$selectvarX)
+    if(input$aplicarlogx == T){
+      
+      colnames(dat) = c(input$selectvarY, paste("log_", input$selectvarX, sep = ""))
+      
+    }else{colnames(dat) = c(input$selectvarY, input$selectvarX)}
+    if(input$aplicarlogy == T){
+      
+      colnames(dat) = c(paste("log_", input$selectvarY, sep = ""), input$selectvarX)
+      
+    }else{colnames(dat) = c(input$selectvarY, input$selectvarX)}
+    if(input$aplicarlogx == T & input$aplicarlogy == T){
+      
+      colnames(dat) = c(paste("log_", input$selectvarY, sep = ""), paste("log_", input$selectvarX, sep = ""))
+      
+    }else{colnames(dat) = c(input$selectvarY, input$selectvarX)}
+    
+    dat
+  
+    })
+  
+  regRLS = reactive({
     
     if(input$aplicarReg == TRUE){
       
-      reg = lm(datos()[,input$selectvarY] ~ datos()[,input$selectvarX], data = datos())
-      summary(reg)
+      reg = lm(datRLS()[,1] ~ ., data = datRLS())
       
     }else{
       
@@ -1338,40 +1429,39 @@ server <- function(input, output) {
     
     if(input$aplicarlogx == T){
       
-      reg = lm(datos()[,input$selectvarY] ~ log(datos()[,input$selectvarX]), data = datos())
-      summary(reg)
+      reg = lm(datRLS()[,1] ~ log(datRLS()[,2]), data = datRLS())
       
     }else{
       
-      reg = lm(datos()[,input$selectvarY] ~ datos()[,input$selectvarX], data = datos())
-      summary(reg)
+      reg = lm(datRLS()[,1] ~ datRLS()[,2], data = datRLS())
       
     }
     
     if(input$aplicarlogy == T){
       
-      reg = lm(log(datos()[,input$selectvarY]) ~ datos()[,input$selectvarX], data = datos())
-      summary(reg)
+      reg = lm(log(datRLS()[,1]) ~ datRLS()[,2], data = datRLS())
       
     }else{
       
-      reg = lm(datos()[,input$selectvarY] ~ datos()[,input$selectvarX], data = datos())
-      summary(reg)
+      reg = lm(datRLS()[,1] ~ datRLS()[,2], data = datRLS())
       
     }
     
     if(input$aplicarlogy == T & input$aplicarlogx == T){
       
-      reg = lm(log(datos()[,input$selectvarY]) ~ log(datos()[,input$selectvarX]), data = datos())
-      summary(reg)
+      reg = lm(log(datRLS()[,1]) ~ log(datRLS()[,2]), data = datRLS())
       
     }else{
       
-      reg = lm(datos()[,input$selectvarY] ~ datos()[,input$selectvarX], data = datos())
-      summary(reg)
+      reg = lm(datRLS()[,1] ~ datRLS()[,2], data = datRLS())
       
     }
     
+  })
+  
+  output$summaryregLS = renderPrint({
+    
+    summary(regRLS())
     
   }) # Solo en RLS
   
@@ -1452,7 +1542,10 @@ server <- function(input, output) {
       reg = lm(datos()[,input$selectvarY] ~ datos()[,input$selectvarX], data = datos())
       residuos = data.frame(residuals(reg)); residuos = data.frame(residuos[,1]);
       
-      p = ggplot(data = datos(), aes(datos()[,input$selectvarX], residuos[,1])) 
+      p = ggplot(data = datos(), aes(datos()[,input$selectvarX], residuos[,1])) + 
+        xlab(input$selectvarX) + 
+        ylab("Residuos")
+      
       pp = p + geom_point() + geom_smooth(method = "loess", color = "brown3") +
         geom_hline(yintercept = 0) +
         theme_bw()
@@ -1465,7 +1558,10 @@ server <- function(input, output) {
       reg = lm(datos()[,input$selectvarY] ~ log(datos()[,input$selectvarX]), data = datos())
       residuos = data.frame(residuals(reg)); residuos = data.frame(residuos[,1]);
       
-      p = ggplot(data = datos(), aes(datos()[,input$selectvarX], residuos[,1])) 
+      p = ggplot(data = datos(), aes(datos()[,input$selectvarX], residuos[,1])) + 
+        xlab(input$selectvarX) + 
+        ylab("Residuos")
+      
       pp = p + geom_point() + geom_smooth(method = "loess", color = "brown3") +
         geom_hline(yintercept = 0) +
         theme_bw()
@@ -1475,7 +1571,10 @@ server <- function(input, output) {
       reg = lm(datos()[,input$selectvarY] ~ datos()[,input$selectvarX], data = datos())
       residuos = data.frame(residuals(reg)); residuos = data.frame(residuos[,1]);
       
-      p = ggplot(data = datos(), aes(datos()[,input$selectvarX], residuos[,1])) 
+      p = ggplot(data = datos(), aes(datos()[,input$selectvarX], residuos[,1])) + 
+        xlab(input$selectvarX) + 
+        ylab("Residuos")
+      
       pp = p + geom_point() + geom_smooth(method = "loess", color = "brown3") +
         geom_hline(yintercept = 0) +
         theme_bw()
@@ -1486,7 +1585,10 @@ server <- function(input, output) {
       reg = lm(log(datos()[,input$selectvarY]) ~ datos()[,input$selectvarX], data = datos())
       residuos = data.frame(residuals(reg)); residuos = data.frame(residuos[,1]);
       
-      p = ggplot(data = datos(), aes(datos()[,input$selectvarX], residuos[,1])) 
+      p = ggplot(data = datos(), aes(datos()[,input$selectvarX], residuos[,1])) + 
+        xlab(input$selectvarX) + 
+        ylab("Residuos")
+      
       pp = p + geom_point() + geom_smooth(method = "loess", color = "brown3") +
         geom_hline(yintercept = 0) +
         theme_bw()
@@ -1496,7 +1598,10 @@ server <- function(input, output) {
       reg = lm(datos()[,input$selectvarY] ~ datos()[,input$selectvarX], data = datos())
       residuos = data.frame(residuals(reg)); residuos = data.frame(residuos[,1]);
       
-      p = ggplot(data = datos(), aes(datos()[,input$selectvarX], residuos[,1])) 
+      p = ggplot(data = datos(), aes(datos()[,input$selectvarX], residuos[,1])) + 
+        xlab(input$selectvarX) + 
+        ylab("Residuos")
+      
       pp = p + geom_point() + geom_smooth(method = "loess", color = "brown3") +
         geom_hline(yintercept = 0) +
         theme_bw()
@@ -1508,7 +1613,10 @@ server <- function(input, output) {
       reg = lm(log(datos()[,input$selectvarY]) ~ log(datos()[,input$selectvarX]), data = datos())
       residuos = data.frame(residuals(reg)); residuos = data.frame(residuos[,1]);
       
-      p = ggplot(data = datos(), aes(datos()[,input$selectvarX], residuos[,1])) 
+      p = ggplot(data = datos(), aes(datos()[,input$selectvarX], residuos[,1])) + 
+        xlab(input$selectvarX) + 
+        ylab("Residuos")
+      
       pp = p + geom_point() + geom_smooth(method = "loess", color = "brown3") +
         geom_hline(yintercept = 0) +
         theme_bw()
@@ -1518,7 +1626,10 @@ server <- function(input, output) {
       reg = lm(datos()[,input$selectvarY] ~ datos()[,input$selectvarX], data = datos())
       residuos = data.frame(residuals(reg)); residuos = data.frame(residuos[,1]);
       
-      p = ggplot(data = datos(), aes(datos()[,input$selectvarX], residuos[,1])) 
+      p = ggplot(data = datos(), aes(datos()[,input$selectvarX], residuos[,1])) + 
+        xlab(input$selectvarX) + 
+        ylab("Residuos")
+      
       pp = p + geom_point() + geom_smooth(method = "loess", color = "brown3") +
         geom_hline(yintercept = 0) +
         theme_bw()
@@ -1563,7 +1674,7 @@ server <- function(input, output) {
       
       bar = seq(min(residuos[,1]), max(residuos[,1]), length.out = cs+1)
       
-      p = ggplot(residuos, aes(residuos[,1])) 
+      p = ggplot(residuos, aes(residuos[,1])) + xlab("Residuos") + ylab("Densidad")
       
       pp = p + geom_histogram(aes(y = ..density..), 
                               breaks = bar, 
@@ -1588,7 +1699,7 @@ server <- function(input, output) {
       cs = nclass.Sturges(residuos[,1]) 
       bar = seq(min(residuos[,1]), max(residuos[,1]), length.out = cs+1)
       
-      p = ggplot(residuos, aes(residuos[,1])) 
+      p = ggplot(residuos, aes(residuos[,1])) + xlab("Residuos") + ylab("Densidad")
       
       pp = p + geom_histogram(aes(y = ..density..), 
                               breaks = bar, 
@@ -1610,7 +1721,7 @@ server <- function(input, output) {
       
       bar = seq(min(residuos[,1]), max(residuos[,1]), length.out = cs+1)
       
-      p = ggplot(residuos, aes(residuos[,1])) 
+      p = ggplot(residuos, aes(residuos[,1])) + xlab("Residuos") + ylab("Densidad")
       
       pp = p + geom_histogram(aes(y = ..density..), 
                               breaks = bar, 
@@ -1633,7 +1744,7 @@ server <- function(input, output) {
       cs = nclass.Sturges(residuos[,1]) 
       bar = seq(min(residuos[,1]), max(residuos[,1]), length.out = cs+1)
       
-      p = ggplot(residuos, aes(residuos[,1])) 
+      p = ggplot(residuos, aes(residuos[,1])) + xlab("Residuos") + ylab("Densidad")
       
       pp = p + geom_histogram(aes(y = ..density..), 
                               breaks = bar, 
@@ -1655,7 +1766,7 @@ server <- function(input, output) {
       
       bar = seq(min(residuos[,1]), max(residuos[,1]), length.out = cs+1)
       
-      p = ggplot(residuos, aes(residuos[,1])) 
+      p = ggplot(residuos, aes(residuos[,1])) + xlab("Residuos") + ylab("Densidad")
       
       pp = p + geom_histogram(aes(y = ..density..), 
                               breaks = bar, 
@@ -1679,7 +1790,7 @@ server <- function(input, output) {
       cs = nclass.Sturges(residuos[,1]) 
       bar = seq(min(residuos[,1]), max(residuos[,1]), length.out = cs+1)
       
-      p = ggplot(residuos, aes(residuos[,1])) 
+      p = ggplot(residuos, aes(residuos[,1])) + xlab("Residuos") + ylab("Densidad")
       
       pp = p + geom_histogram(aes(y = ..density..), 
                               breaks = bar, 
@@ -1701,7 +1812,7 @@ server <- function(input, output) {
       
       bar = seq(min(residuos[,1]), max(residuos[,1]), length.out = cs+1)
       
-      p = ggplot(residuos, aes(residuos[,1])) 
+      p = ggplot(residuos, aes(residuos[,1])) + xlab("Residuos") + ylab("Densidad")
       
       pp = p + geom_histogram(aes(y = ..density..), 
                               breaks = bar, 
@@ -1744,7 +1855,7 @@ server <- function(input, output) {
       
       if(class(datos()[,input$varesc]) == "numeric"){
         
-        x = ggplot(datos(), aes(get(input$varesc)))
+        x = ggplot(datos(), aes(get(input$varesc))) + xlab(input$varesc) + ylab("Densidad")
         
         x + geom_density(fill = '#75AADB', alpha = 0.32)  + 
           geom_vline(aes(xintercept = mean(datos()[,input$varesc])), col = "red", size = 0.75) +  
@@ -1756,7 +1867,7 @@ server <- function(input, output) {
     }else{
       
       if(class(datos()[,input$varesc]) == "numeric"){
-        x = ggplot(datos(), aes(get(input$varesc)))
+        x = ggplot(datos(), aes(get(input$varesc))) + xlab(input$varesc) + ylab("Densidad")
         x + geom_density(fill = '#75AADB', alpha = 0.32)  + theme_bw()}else{NULL}
     }
     
@@ -1859,41 +1970,75 @@ server <- function(input, output) {
   })
   
   
-  output$grupos = renderPrint({
+  
+  # Analisis cluster
+
+      # Cluster jerarquico
+
+  datos_noNum = reactive({
     
-    if(input$fil_clus == T){distancia = dist(datos(), method = input$usa_distancia); distancia}else{NULL}
-    if(input$col_clus == T){distancia = dist(t(scale(datos())), method = input$usa_distancia); distancia}else{NULL}
-    distancia
+    datos.noNum = datos()[,sapply(datos(), class) != "numeric"]
+    datos.noNum
+    
+  }) # Datos con variables no numericas
+  
+  output$var_Char = renderUI({
+    selectInput("varChar", "Seleccionar nombre de filas:",
+                choices = names(datos_noNum()),
+                selected = 1)
+  })
+  
+  datos_cj = reactive({
+    
+    datosCJ = datos()[,sapply(datos(), class) == "numeric"]
+    datosCJ; rownames(datosCJ) = c(datos()[,1]); datosCJ
+    
+  }) # Datos con variables numericas
+  
+  
+  
+  distancia = reactive({
+    
+    distancia = dist(datos_cj(), method = input$usa_distancia)
     
   })
+  
+  output$grupos = renderPrint({
+    
+    fit = hclust(distancia(), method = input$usa_cluster)
+    grupo = cutree(fit, k = input$usa_agrupamientos) 
+    grupo = data.frame(grupo) 
+    
+    if(input$dibujar_agrup == T){t(grupo)}else{print("A la espera de seleccionar agrupamientos")}
+    
+  }) # Visualizador matriz de distancias
   
   output$cluster_jer = renderPlot({
     
-    if(input$fil_clus == T){distancia = dist(datos(), method = input$usa_distancia); distancia}else{NULL}
-    if(input$col_clus == T){distancia = dist(t(scale(datos())), method = input$usa_distancia); distancia}else{NULL}
-    distancia
-    fit = hclust(distancia, method = input$usa_cluster)
-    plot(fit,  cex = 0.7) 
+    fit = hclust(distancia(), method = input$usa_cluster)
+    plot(fit, cex = 0.7) 
     
     if(input$dibujar_agrup == T){plot(fit,  cex = 0.7); rect.hclust(fit, k = input$usa_agrupamientos, border="red")}else{plot(fit,  cex = 0.7)}
     
-  })
+  }) # Cluster jerarquico
   
+  
+      # Cluster kmeans
   
   output$varX_clus = renderUI({
     selectInput("varXclus", "Seleccionar variable X:",
-                choices = names(datos()),
+                choices = names(datos_cj()),
                 selected = 1)
   })
   output$varY_clus = renderUI({
     selectInput("varYclus", "Seleccionar variable Y:",
-                choices = names(datos()),
+                choices = names(datos_cj()),
                 selected = 1)
   })
   
   
   datos_sc = eventReactive(input$dscale, {
-    data.frame(scale(datos()))
+    data.frame(scale(datos_cj()))
   })
   
   variabilidad = reactive({
@@ -1924,11 +2069,9 @@ server <- function(input, output) {
     else{km2 = kmeans(datos(), centers = input$num_centros, nstart = input$nstart,  algorithm = input$usa_algoritmo)}
     
     km2$cluster = as.factor(km2$cluster) 
-    km2$cluster
+    km = km2$cluster; km
     
   })
-  
-  
   
   output$cluster_kmeans = renderPlotly({
     
@@ -1939,41 +2082,45 @@ server <- function(input, output) {
   }) # Hay que revisarlo
   
   
+  # REGRESION LINEAL MULTIPLE Y CORRELACION
+  
+        # CORRELACION
   
   output$vxCorr = renderUI({
     selectInput("vx_Corr", "Seleccionar variable X:",
-                choices = names(datos()),
+                choices = names(datos_cj()),
                 selected = 1)
   }) 
   output$vyCorr = renderUI({
     selectInput("vy_Corr", "Seleccionar variable Y:",
-                choices = names(datos()),
+                choices = names(datos_cj()),
                 selected = 1)
   })
   
   output$corrTestPear = renderPrint({
     
-    cor.test(datos()[,input$vx_Corr],datos()[,input$vy_Corr])    
+    cor.test(datos_cj()[,input$vx_Corr],datos()[,input$vy_Corr])    
     
   })
   output$corrPlot = renderPlot({
-    corrplot(cor(datos()), method = "number")
+    corrplot(cor(datos_cj()), method = "number")
   })
   
   output$rm_dep = renderUI({
     selectInput("rmDep", "Seleccionar variable dependiente:",
-                choices = names(datos()),
+                choices = names(datos_cj()),
                 selected = 1)
   }) # Variable y RLM
+  
   output$rm_Vars = renderUI({
     checkboxGroupInput("rmVars", "Seleccionar variables independientes:", 
-                       choices = names(datos()), selected = NULL)
+                       choices = names(datos_cj()), selected = NULL)
   }) # Variables x RLM
   
   datReg = reactive({
     
-    dep = datos()[,input$rmDep]; colnames(dep) = colnames(datos()[,input$rmDep])
-    ind = datos()[,input$rmVars]; colnames(ind) = colnames(datos()[,input$rmVars])
+    dep = datos_cj()[,input$rmDep]; colnames(dep) = colnames(datos_cj()[,input$rmDep])
+    ind = datos_cj()[,input$rmVars]; colnames(ind) = colnames(datos_cj()[,input$rmVars])
     
     dReg = cbind.data.frame(dep, ind)
     
