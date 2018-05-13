@@ -676,7 +676,9 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                                               
                                                               checkboxInput("regMul", "Resultados de la regresion"), hr(),
                                                               
-                                                              checkboxInput("colEstu", "Estudio de la colinealidad")
+                                                              checkboxInput("colEstu", "Estudio de la colinealidad"), hr(),
+                                                              
+                                                              checkboxInput("resEst", "Estudio de los residuos")
                                                               
                                                  ), # Fin sidebarPanel regresion lineal multiple 
                                                  mainPanel(
@@ -716,6 +718,17 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                                                       column(width = 5, offset = 0.25, br(),
                                                                              h4("Numero de condicion"),
                                                                              verbatimTextOutput("NC"))
+                                                                    )),
+                                                   
+                                                   conditionalPanel(condition = 'input.resEst',
+                                                                    fluidRow(
+                                                                      column(width = 5, offset = 0.25, br(),
+                                                                             h4("Grafico de los residuos"),
+                                                                             plotlyOutput("RLMresid")),
+                                                                      
+                                                                      column(width = 5, offset = 0.25, br(),
+                                                                             h4("Test de normalidad de los residuos"),
+                                                                             verbatimTextOutput("RLMnorm"))
                                                                     ))
                                                    
                                                  ) # Fin mainPanel regresion lineal multiple
@@ -1880,7 +1893,6 @@ server <- function(input, output) {
                  selected = NULL)
     
   })
-  
   output$controles5 = renderUI({
     
     sliderInput("barras", 
@@ -1889,7 +1901,6 @@ server <- function(input, output) {
     
     
   })
-  
   output$controles6 = renderUI({
     
     checkboxInput("trazLinea",
@@ -1942,7 +1953,6 @@ server <- function(input, output) {
                 choices = names(datos()),
                 selected = 1)
   })
-  
   output$var2 = renderUI({
     
     selectInput("selectvar2", "Seleccionar variable Y:",
@@ -2130,6 +2140,13 @@ server <- function(input, output) {
     lm(dep ~ ., datReg())
   })
   
+  residRLM = reactive({
+    
+    residuos = data.frame(resid(regMul())); colnames(residuos) = c("Residuos")
+    residuos
+    
+  }) # Residuos RLM
+  
   output$sumRegMul = renderPrint({
     
     summary(regMul())
@@ -2160,7 +2177,7 @@ server <- function(input, output) {
       return(fiv)
     }
     
-    FIV_(as.matrix(datReg()))
+    FIV_(as.matrix(datReg()[,-1]))
     
   })
   
@@ -2193,14 +2210,41 @@ server <- function(input, output) {
       return(Xlu)
     }
     
-    observaciones = dim(datReg())[1]
+    observaciones = dim(datReg()[,-1])[1]
     cte = rep(1, observaciones) 
-    matriz = cbind(cte,as.matrix(datReg())) 
+    matriz = cbind(cte,as.matrix(datReg()[,-1])) 
     Xlu = longitud_unidad(matriz)
     NC_(Xlu)
     
   })
   
+  output$RLMresid = renderPlotly({
+    
+    cs = nclass.Sturges(residRLM()[,1])
+    bar = seq(min(residRLM()[,1]), max(residRLM()[,1]), length.out = cs + 1)
+    
+    p = ggplot(residRLM(), aes(residRLM()[,1])) + xlab("Residuos") + ylab("Densidad")
+    
+     p + geom_histogram(aes(y = ..density..), 
+                            breaks = bar, 
+                            fill = '#75AADB',
+                            colour = "black", 
+                            alpha = 0.32) +
+      
+      geom_density(kernel = "gaussian", 
+                   col = "brown3",
+                   linetype = 1,
+                   size = 0.75) + theme_bw()          
+      
+      
+    
+  })
+  
+  output$RLMnorm = renderPrint({
+    
+    shapiro.test(residRLM()[,1])
+    
+  })
   
 }
 
