@@ -849,13 +849,20 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
 
 
 
-server <- function(input, output) {
+server <- function(input, output, session) {
   
-  datos_2 = data.frame()
+  datos_2 <- NULL
   
   normal = eventReactive(input$creaNorm, {
-    norm = rnorm(isolate(input$nNorm), isolate(input$media), isolate(input$varianza))
-    
+    if(input$creaNorm>0){
+      norm = rnorm(isolate(input$nNorm), isolate(input$media), isolate(input$varianza))
+      if (is.null(datos_2) || (nrow(datos_2) != length(norm))) {
+        datos_2 <<- cbind(norm)
+      } else {
+        datos_2 <<- cbind(datos_2, norm)
+      }
+    }
+    datos_2
   })
   
   binomial = eventReactive(input$creaBinom, {
@@ -889,9 +896,8 @@ server <- function(input, output) {
   
   
   datos2 = reactive({
-    
-    datos_2 = cbind(datosN(), datosB(), datosP())
-    datos_2 = as.data.frame(datos_2)
+    datos = cbind(datosN(), datosB(), datosP())
+    datos = as.data.frame(datos)
   })
   
   datos_pred_NA = eventReactive(input$camb_NA_pred, {
