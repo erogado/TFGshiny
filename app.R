@@ -69,7 +69,7 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                                               
                                                  ), # Fin absolutePanel Sube tus datos
                                                  
-                                                 mainPanel(
+                                                 mainPanel(br(),
                                                    
                                                    fluidRow(
                                                      
@@ -259,6 +259,7 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                                                       column(width = 10, offset = 0.5,
                                                                              h4("Media por variable"), br(),
                                                                              verbatimTextOutput("media_text")),
+                                                                      
                                                                       column(width = 1, offset = 0.5,
                                                                              actionButton("camb_NA_media", "Aplicar"))
                                                                       
@@ -271,6 +272,7 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                                                       column(width = 10, offset = 0.5,
                                                                              h4("Observaciones a eliminar:"), br(),
                                                                              verbatimTextOutput("eliminar_text")),
+                                                                      
                                                                       column(width = 1, offset = 0.5,
                                                                              actionButton("camb_NA_eliminar", "Aplicar"))
                                                                       
@@ -681,6 +683,7 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                                               checkboxInput("resEst", "Estudio de los residuos")
                                                               
                                                  ), # Fin sidebarPanel regresion lineal multiple 
+                                                 
                                                  mainPanel(
                                                    
                                                    conditionalPanel(condition = 'input.corr',
@@ -833,7 +836,7 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                                                       
                                                                       column(width = 6, offset = 0.5,
                                                                              h4("Cluster k-means"),
-                                                                             plotlyOutput("cluster_kmeans")))
+                                                                             plotOutput("cluster_kmeans")))
                                                                     
                                                    ) # Fin conditionalPanel kmeans
                                                  ) # Fin mainPanel Analisis cluster
@@ -841,32 +844,65 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                       ) # Fin del tabPanel Cluster
                                       
                                       
-                                    ) #??? Fin del tabsetPanel Analisis multivariante
-                           ) #??? Fin del tabPanel Analisis multivariante
+                                    ) # Fin del tabsetPanel Analisis multivariante
+                           ) # Fin del tabPanel Analisis multivariante
                            
                 ) # Fin navbarPage
 ) # Fin fluidPage
 
 
 
-server <- function(input, output, session) {
+server <- function(input, output) {
+  
+ 
   
   datos_2 <- NULL
   
   normal = eventReactive(input$creaNorm, {
-    if(input$creaNorm>0){
+    
+    if(input$creaNorm > 0){ 
+      
       norm = rnorm(isolate(input$nNorm), isolate(input$media), isolate(input$varianza))
-      if (is.null(datos_2) || (nrow(datos_2) != length(norm))) {
-        datos_2 <<- cbind(norm)
-      } else {
-        datos_2 <<- cbind(datos_2, norm)
-      }
+      
+      if (is.null(datos_2) | (nrow(datos_2) != length(norm))){
+        
+        datos_2 <- cbind(norm)
+        
+      }else{ 
+        
+        datos_2 <- cbind(datos_2, norm)
+        
+      } 
+      
     }
+    
     datos_2
+    
   })
   
+  
+  datos_3 <- NULL
+  
   binomial = eventReactive(input$creaBinom, {
-    binom = rbinom(isolate(input$nBin), isolate(input$tamanno), isolate(input$prob))
+    
+    if(input$creaBinom > 0){ 
+      
+      binom = rbinom(isolate(input$nBin), isolate(input$tamanno), isolate(input$prob))
+      
+      if (is.null(datos_3) | (nrow(datos_3) != length(binom))){
+        
+        datos_3 <- cbind(binom)
+        
+      }else{ 
+        
+        datos_3 <- cbind(datos_3, binom)
+        
+      } 
+      
+    }
+    
+    datos_3
+    
     
   })
   
@@ -876,32 +912,18 @@ server <- function(input, output, session) {
   }) 
   
   
-  datosN = reactive({
-    
-    if(input$creaNorm){datos_N = cbind(datos2(), normal()); datos_N}else{NULL}
-    
-  })
-  
-  datosB = reactive({
-    
-    if(input$creaBinom){datos_B = cbind(binomial()); datos_B}else{NULL}
-    
-  })
-  
-  datosP = reactive({
-    
-    if(input$creaPoiss){datos_P = cbind(poiss()); datos_P}else{NULL}
-    
-  })
-  
   
   datos2 = reactive({
-    datos = cbind(datosN(), datosB(), datosP())
-    datos = as.data.frame(datos)
+    
+    datos = cbind(normal(), binomial())
+    datos = as.data.frame(datos); datos
+    
   })
   
   datos_pred_NA = eventReactive(input$camb_NA_pred, {
+    
     data.frame(complete(mi.datos(), isolate(input$iteraccion_num)))
+    
   })
   
   
@@ -943,13 +965,15 @@ server <- function(input, output, session) {
     
     if(!is.null(infile()) & input$apli_logBOTON == T){
       
-      dat = mutate(dat, logVar1 = log(dat[,isolate(input$varLog1)]), logVar2 = log(dat[,isolate(input$varLog2)]))
+      dat = mutate(dat, logVar1 = log(dat[,isolate(input$varLog1)]), 
+                   logVar2 = log(dat[,isolate(input$varLog2)]))
       
     }else{dat}
     
     if(!is.null(infile()) & input$apli_scaleBOTON == T){
       
-      dat = mutate(dat, scaleVar1 = log(dat[,isolate(input$varScale1)]), scaleVar2 = log(dat[,isolate(input$varScale2)]))
+      dat = mutate(dat, scaleVar1 = scale(dat[,isolate(input$varScale1)]), 
+                   scaleVar2 = scale(dat[,isolate(input$varScale2)]))
       
     }else{dat}
     
@@ -963,7 +987,6 @@ server <- function(input, output, session) {
         coef.variacion = sd(df[,v[ii]]) / mean(df[,v[ii]]) 
         
         if ((asimetria < -1 | asimetria > 1) & coef.variacion > 1){
-          print(paste("transformando variable: ", v[ii]))
           df$bc_tmp <- BoxCox(df[,v[ii]],BoxCox.lambda(df[,v[ii]]))
           names(df)[names(df)=="bc_tmp"] = paste("BoxCox_", v[ii], sep = "")
         }
@@ -997,6 +1020,7 @@ server <- function(input, output, session) {
     summary(datos())
     
   }) # Summary de los datos
+  
   output$classDa = renderPrint({
     
     sapply(datos(), class)
@@ -1033,7 +1057,9 @@ server <- function(input, output, session) {
                      selectInput("selx", "Seleccionar variable X:",
                                  choices = names(datos()),
                                  selected = 1))
+    
   }) # Variable x diagnostico individual NAs
+  
   output$selecvarYDiag_NA = renderUI({
     conditionalPanel(condition = 'input.diag_NA',
                      selectInput("sely", "Seleccionar variable Y:",
@@ -1049,12 +1075,14 @@ server <- function(input, output, session) {
       
       md.pattern(datos())
       
-    }else{NULL}
+    }
     
   })
   
   mi.datos = reactive({
+    
     mi.datos = mice(isolate(datos()), seed = 1234, printFlag = FALSE)
+    
   }) 
   
   output$selec_varImp = renderUI({
@@ -1173,6 +1201,7 @@ server <- function(input, output, session) {
     mean(medBo$thetastar)
     
   }) # Media bootstrap
+  
   output$est_varianza = renderPrint({
     
     medBo = bootstrap(datos()[,input$selecVar_normtest], input$repli, var)
@@ -1186,12 +1215,14 @@ server <- function(input, output, session) {
     mean.boot = function(x,ind){
       return(c(mean(x[ind]), var(x[ind])))
     }
-    eso = boot(datos()[,input$selecVar_normtest], mean.boot, input$repli)
-    eso
+    bb = boot(datos()[,input$selecVar_normtest], mean.boot, input$repli)
+    bb
   })
+  
   output$ic_est_media = renderPrint({
     boot.ci(icBoot(), index = 1, conf = input$confianza)
   }) # IC para media bootstrap 
+  
   output$ic_est_varianza = renderPrint({
     boot.ci(icBoot(), index = 2, conf = input$confianza)
   }) # IC para varianza bootstrap
@@ -1218,6 +1249,7 @@ server <- function(input, output, session) {
     int = data.frame(table(intervalos)); colnames(int) = c("Intervalos", "Frecuencia")
     int
   })
+  
   output$intervalos_v2 = renderPrint({
     
     r = range(datos()[,input$varInd2])
@@ -1276,6 +1308,7 @@ server <- function(input, output, session) {
       theme_bw()
     
   }) # Plot recuentos 1
+  
   output$plot_v2 = renderPlotly({
     
     r = range(datos()[,input$varInd2])
@@ -1899,11 +1932,19 @@ server <- function(input, output, session) {
                  selected = NULL)
     
   })
+  
+  bar = reactive({
+  
+    cs = nclass.Sturges(datos()[,input$varescHist])
+    
+    return(cs)
+
+  })
   output$controles5 = renderUI({
     
     sliderInput("barras", 
                 label = h4("Seleccionar numero de barras:"),
-                min = 1, max = 50, value = 30)
+                min = 1, max = 50, value = bar())
     
     
   })
@@ -1917,8 +1958,8 @@ server <- function(input, output, session) {
   
   output$histograma = renderPlotly({
     
+    cs = nclass.Sturges(datos()[,input$varescHist])
     bar = seq(min(datos()[,input$varescHist]), max(datos()[,input$varescHist]), length.out = input$barras + 1)
-    
     
     if(input$trazLinea){
       
@@ -1934,7 +1975,10 @@ server <- function(input, output, session) {
         
         geom_freqpoly(breaks = bar,
                       colour = "brown3", 
-                      size = 0.75)
+                      size = 0.75) + 
+        
+        xlab(input$varescHist) + ylab("Recuento")
+      
     }else{
       
       ggplot(datos(), aes(get(input$varescHist))) + 
@@ -1945,7 +1989,9 @@ server <- function(input, output, session) {
                        colour = "black", 
                        alpha = 0.5) + 
         
-        theme_bw()
+        theme_bw() + 
+        
+        xlab(input$varescHist) + ylab("Recuento")
       
       
     }
@@ -2034,7 +2080,10 @@ server <- function(input, output, session) {
     fit = hclust(distancia(), method = input$usa_cluster)
     plot(fit, cex = 0.7) 
     
-    if(input$dibujar_agrup == T){plot(fit,  cex = 0.7); rect.hclust(fit, k = input$usa_agrupamientos, border="red")}else{plot(fit,  cex = 0.7)}
+    if(input$dibujar_agrup == T){
+      
+      plot(fit,  cex = 0.7); 
+      rect.hclust(fit, k = input$usa_agrupamientos, border="red")}else{plot(fit,  cex = 0.7)}
     
   }) # Cluster jerarquico
   
@@ -2054,14 +2103,27 @@ server <- function(input, output, session) {
   
   
   datos_sc = eventReactive(input$dscale, {
+    
     data.frame(scale(datos_cj()))
+    
   })
   
   variabilidad = reactive({
     
-    wss = (nrow(datos_sc()) - 1)*sum(apply(datos_sc(), 2, var))
-    for (i in 2:input$num_var) wss[i] <- sum(kmeans(datos_sc(), centers = i)$withinss)
-    wss
+    if(input$dscale == T){
+      
+      wss = (nrow(datos_sc()) - 1)*sum(apply(datos_sc(), 2, var))
+      for (i in 2:input$num_var) wss[i] <- sum(kmeans(datos_sc(), centers = i)$withinss)
+      wss
+      
+    }else{
+      
+      wss = (nrow(datos_cj()) - 1)*sum(apply(datos_cj(), 2, var))
+      for (i in 2:input$num_var) wss[i] <- sum(kmeans(datos_cj(), centers = i)$withinss)
+      wss
+      
+    }
+    
     
   })
   
@@ -2081,21 +2143,48 @@ server <- function(input, output, session) {
   km = eventReactive(input$apli_kmeans, {
     
     if(input$dscale == T){
-      km2 = kmeans(datos_sc(), centers = input$num_centros, nstart = input$nstart,  algorithm = input$usa_algoritmo)}
-    else{km2 = kmeans(datos(), centers = input$num_centros, nstart = input$nstart,  algorithm = input$usa_algoritmo)}
-    
-    km2$cluster = as.factor(km2$cluster) 
-    km = km2$cluster; km
+      
+      km2 = kmeans(datos_sc(), centers = input$num_centros, nstart = input$nstart,  
+                   algorithm = input$usa_algoritmo)
+      
+      return(km2)
+      
+      }else{
+        
+      km2 = kmeans(datos_cj(), centers = input$num_centros, nstart = input$nstart, 
+                   algorithm = input$usa_algoritmo)
+        
+      return(km2)
+        
+        }
     
   })
   
-  output$cluster_kmeans = renderPlotly({
+  output$cluster_kmeans = renderPlot({
     
-    if(input$apli_kmeans == T){
-      p = ggplot(datos(), aes(x = input$varXclus, y = input$varYclus, color = km())) 
-      p + geom_point() + theme_bw()}else{NULL}
-    
-  }) # Hay que revisarlo
+    if(input$apli_kmeans > 0){
+      
+      if(input$dscale == T){
+        
+        plot(datos_sc()[,input$varXclus], datos_sc()[,input$varYclus],
+             col = km()$cluster,
+             xlab = input$varXclus,
+             ylab = input$varYclus,
+             pch = 20, cex = 3)
+        
+      }else{
+        
+        plot(datos_cj()[,input$varXclus], datos_cj()[,input$varYclus],
+             col = km()$cluster,
+             xlab = input$varXclus,
+             ylab = input$varYclus,
+             pch = 20, cex = 3)
+        
+      }
+      
+    }
+
+  }) 
   
   
   # REGRESION LINEAL MULTIPLE Y CORRELACION
@@ -2118,6 +2207,7 @@ server <- function(input, output, session) {
     cor.test(datos_cj()[,input$vx_Corr],datos()[,input$vy_Corr])    
     
   })
+  
   output$corrPlot = renderPlot({
     corrplot(cor(datos_cj()), method = "number")
   })
@@ -2143,7 +2233,9 @@ server <- function(input, output, session) {
   })
   
   regMul = reactive({
+    
     lm(dep ~ ., datReg())
+    
   })
   
   residRLM = reactive({
@@ -2199,8 +2291,6 @@ server <- function(input, output, session) {
       return(nc)
       
     }
-    
-    
     
     longitud_unidad <- function(X){
       
