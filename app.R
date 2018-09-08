@@ -21,7 +21,7 @@ library(MASS)
 library(forecast)
 library(e1071)  
 
-ui <- fluidPage(theme = shinytheme("sandstone"),
+ui <- fluidPage(theme = shinytheme("cosmo"),
                 
                 navbarPage("Appstatistics",
                            
@@ -70,13 +70,13 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                                  ), # Fin absolutePanel Sube tus datos
                                                  
                                                  mainPanel(br(),
-                                                   
-                                                   fluidRow(
-                                                     
-                                                     column(width = 12,
-                                                            DT::dataTableOutput("tabladatos"))
-                                                     
-                                                   ) # Fin fluidRow
+                                                           
+                                                           fluidRow(
+                                                             
+                                                             column(width = 12,
+                                                                    DT::dataTableOutput("tabladatos"))
+                                                             
+                                                           ) # Fin fluidRow
                                                  ) # Fin mainPanel Sube tus datos
                                                  
                                                ) # Fin del sidebarLayout Sube datos
@@ -91,14 +91,16 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                                               
                                                               checkboxInput("diag_NA", "Mostrar diasnostico NA"),
                                                               
-                                                              radioButtons("limpia_NA", "Sustituir los NA por:",
-                                                                           inline = T,
-                                                                           select = NULL, 
-                                                                           choices = c("Media" = "media_NA",
-                                                                                       "Predicciones" = "pred_NA",
-                                                                                       "Eliminar" = "eliminar_NA")),
-                                                              
-                                                              
+                                                              conditionalPanel(condition = 'input.diag_NA',
+                                                                               
+                                                                               radioButtons("limpia_NA", "Sustituir los NA por:",
+                                                                                            inline = T,
+                                                                                            select = NULL, 
+                                                                                            choices = c("Media" = "media_NA",
+                                                                                                        "Predicciones" = "pred_NA",
+                                                                                                        "Eliminar" = "eliminar_NA"))
+                                                                               
+                                                              ),
                                                               
                                                               fluidRow(h5("Distr. normal"),
                                                                        
@@ -112,13 +114,13 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                                               
                                                               fluidRow(
                                                                 
-                                                                column(width = 4, offset = 0.1,
-                                                                       numericInput("media", width = '75px',
+                                                                column(width = 5, offset = 0.1,
+                                                                       numericInput("media", width = '100px',
                                                                                     label = h5("Media"), 
                                                                                     value = 0)),
                                                                 
-                                                                column(width = 4, offset = 0.1,
-                                                                       numericInput("varianza", width = '75px', 
+                                                                column(width = 5, offset = 0.1,
+                                                                       numericInput("varianza", width = '100px', 
                                                                                     label = h5("Varianza"), min = 0,
                                                                                     value = 1)),
                                                                 
@@ -142,21 +144,24 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                                               
                                                               fluidRow(
                                                                 
-                                                                column(width = 4, offset = 0.1,
-                                                                       numericInput("tamanno", width = '75px', 
+                                                                column(width = 5, offset = 0.1,
+                                                                       numericInput("tamanno", width = '100px', 
                                                                                     label = h5("Tamanno"), 
-                                                                                    value = 10)),
+                                                                                    value = 10,
+                                                                                    max = 1000, min = 0)),
                                                                 
-                                                                column(width = 4, offset = 0.1,
-                                                                       numericInput("prob", width = '75px', 
+                                                                column(width = 5, offset = 0.1,
+                                                                       numericInput("prob", width = '100px', 
                                                                                     label = h5("Probabilidad"), 
-                                                                                    value = 0.5, step = 0.1)),
+                                                                                    value = 0.5, step = 0.1,
+                                                                                    max = 1, min = 0)),
                                                                 
                                                                 column(width = 4, offset = 0.1,
                                                                        h5("Accion"),
                                                                        actionButton("creaBinom", "Generar", width = '75px'))
                                                                 
                                                               ), # fin fluidRow Dist.Binomial (media, varianza y generar)
+                                                              
                                                               
                                                               hr(),
                                                               
@@ -172,8 +177,8 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                                               
                                                               fluidRow(
                                                                 
-                                                                column(width = 4, offset = 0.1,
-                                                                       numericInput("lambda", width = '75px',
+                                                                column(width = 5, offset = 0.1,
+                                                                       numericInput("lambda", width = '100px',
                                                                                     label = h5("Lambda"), 
                                                                                     value = 1)),
                                                                 
@@ -181,10 +186,11 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                                                        h5("Accion"),
                                                                        actionButton("creaPoiss", "Generar", width = '75px'))
                                                                 
-                                                              ) # fin fluidRow Dist.Binomial (lambda y generar)
+                                                              ) # fin fluidRow Dist.Poisson (lambda y generar)
                                                               
                                                               
                                                  ), # Fin sidebarPanel Estudio preliminar
+                                                 
                                                  mainPanel(
                                                    
                                                    h4("Summary de los datos"),
@@ -210,74 +216,78 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                                    
                                                    br(), br(),
                                                    
-                                                   h4("Diagnostico NA"),
-                                                   
-                                                   br(),
-                                                   
-                                                   fluidRow(
-                                                     column(width = 5, offset = 0.25,
-                                                            plotOutput("diagnostico_NA", width = "500px")),
-                                                     
-                                                     
-                                                     column(width = 5, offset = 0.25,
-                                                            plotOutput("marginalDiagnostico_NA", width = "500px")),
-                                                     
-                                                     column(width = 2, offset = 0.25,
-                                                            uiOutput("selecvarXDiag_NA"),
-                                                            uiOutput("selecvarYDiag_NA"))
-                                                   ),
-                                                   
-                                                   br(), br(),
-                                                   
-                                                   fluidRow(
-                                                     column(width = 8, offset = 2,
-                                                            tableOutput("tabla_NA"))
-                                                   ),
-                                                   
-                                                   conditionalPanel(condition = "input.limpia_NA == 'pred_NA'",
+                                                   conditionalPanel(condition = 'input.diag_NA',
+                                                                    
                                                                     fluidRow(
-                                                                      column(width = 6, offset = 0.25,
-                                                                             h4("Imputacion MICE"), br(),
-                                                                             verbatimTextOutput("mids")),
                                                                       
-                                                                      column(width = 4, offset = 0.25,
-                                                                             h4("Valores imputados"), br(),
-                                                                             verbatimTextOutput("val_input")),
+                                                                      h4("Diagnostico NA"),
+                                                                      
+                                                                      br(),
+                                                                      
+                                                                      column(width = 5, offset = 0.25,
+                                                                             plotOutput("diagnostico_NA", width = "500px")),
+                                                                      
+                                                                      
+                                                                      column(width = 5, offset = 0.25,
+                                                                             plotOutput("marginalDiagnostico_NA", width = "500px")),
                                                                       
                                                                       column(width = 2, offset = 0.25,
-                                                                             uiOutput("selec_varImp"),
-                                                                             numericInput("iteraccion_num", "Iteraccion elegida:",
-                                                                                          min = 0, max = 5, value = NULL, step = 1),
-                                                                             actionButton("camb_NA_pred", "Aplicar")))   
+                                                                             uiOutput("selecvarXDiag_NA"),
+                                                                             uiOutput("selecvarYDiag_NA"))
+                                                                    ),
                                                                     
-                                                   ),
-                                                   
-                                                   br(), 
-                                                   
-                                                   conditionalPanel(condition = "input.limpia_NA == 'media_NA'",
+                                                                    br(),
+                                                                    
                                                                     fluidRow(
-                                                                      column(width = 10, offset = 0.5,
-                                                                             h4("Media por variable"), br(),
-                                                                             verbatimTextOutput("media_text")),
-                                                                      
-                                                                      column(width = 1, offset = 0.5,
-                                                                             actionButton("camb_NA_media", "Aplicar"))
-                                                                      
-                                                                    )),
-                                                   
-                                                   br(), 
-                                                   
-                                                   conditionalPanel(condition = "input.limpia_NA == 'eliminar_NA'",
-                                                                    fluidRow(
-                                                                      column(width = 10, offset = 0.5,
-                                                                             h4("Observaciones a eliminar:"), br(),
-                                                                             verbatimTextOutput("eliminar_text")),
-                                                                      
-                                                                      column(width = 1, offset = 0.5,
-                                                                             actionButton("camb_NA_eliminar", "Aplicar"))
-                                                                      
-                                                                    ))
-                                                   
+                                                                      column(width = 8, offset = 2,
+                                                                             tableOutput("tabla_NA"))
+                                                                    ),
+                                                                    
+                                                                    conditionalPanel(condition = "input.limpia_NA == 'pred_NA'",
+                                                                                     fluidRow(
+                                                                                       column(width = 6, offset = 0.25,
+                                                                                              h4("Imputacion MICE"), br(),
+                                                                                              verbatimTextOutput("mids")),
+                                                                                       
+                                                                                       column(width = 4, offset = 0.25,
+                                                                                              h4("Valores imputados"), br(),
+                                                                                              verbatimTextOutput("val_input")),
+                                                                                       
+                                                                                       column(width = 2, offset = 0.25,
+                                                                                              uiOutput("selec_varImp"),
+                                                                                              numericInput("iteraccion_num", "Iteraccion elegida:",
+                                                                                                           min = 0, max = 5, value = NULL, step = 1),
+                                                                                              actionButton("camb_NA_pred", "Aplicar")))   
+                                                                                     
+                                                                    ),
+                                                                    
+                                                                    br(), 
+                                                                    
+                                                                    conditionalPanel(condition = "input.limpia_NA == 'media_NA'",
+                                                                                     fluidRow(
+                                                                                       column(width = 10, offset = 0.5,
+                                                                                              h4("Media por variable"), br(),
+                                                                                              verbatimTextOutput("media_text")),
+                                                                                       
+                                                                                       column(width = 1, offset = 0.5,
+                                                                                              actionButton("camb_NA_media", "Aplicar"))
+                                                                                       
+                                                                                     )),
+                                                                    
+                                                                    br(), 
+                                                                    
+                                                                    conditionalPanel(condition = "input.limpia_NA == 'eliminar_NA'",
+                                                                                     fluidRow(
+                                                                                       column(width = 10, offset = 0.5,
+                                                                                              h4("Observaciones a eliminar:"), br(),
+                                                                                              verbatimTextOutput("eliminar_text")),
+                                                                                       
+                                                                                       column(width = 1, offset = 0.5,
+                                                                                              actionButton("camb_NA_eliminar", "Aplicar"))
+                                                                                       
+                                                                                     ))
+                                                                    
+                                                   )
                                                    
                                                  ) # Fin mainPanel Estudio preliminar
                                                  
@@ -300,13 +310,10 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                                                                uiOutput("var_log1")),
                                                               
                                                               conditionalPanel(condition = 'input.log_apli',
-                                                                               uiOutput("var_log2")),
-                                                              
-                                                              
-                                                              conditionalPanel(condition = 'input.log_apli',
                                                                                p("Pulsar el boton para annadir variables."), 
-                                                                               actionButton("apli_logBOTON", "Aplicar"),
-                                                                               actionButton("apli_logELIMINAR", "Eliminar")), 
+                                                                               actionButton("apli_logBOTON", "Aplicar")), 
+                                                              
+                                                              hr(),
                                                               
                                                               br(),
                                                               
@@ -317,25 +324,30 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                                                                uiOutput("var_scale1")),
                                                               
                                                               conditionalPanel(condition = 'input.scale_apli',
-                                                                               uiOutput("var_scale2")),
-                                                              
-                                                              conditionalPanel(condition = 'input.scale_apli',
                                                                                p("Pulsar el boton para annadir variable."), 
-                                                                               actionButton("apli_scaleBOTON", "Aplicar"),
-                                                                               actionButton("apli_scaleELIMINAR", "Eliminar")),
-                                                              br(),
+                                                                               actionButton("apli_scaleBOTON", "Aplicar")),
+                                                              
+                                                              hr(),
+                                                              
+                                                              br(), 
                                                               
                                                               checkboxInput("boxcox", "Transformaciones Box Cox", value = F),
                                                               
                                                               conditionalPanel(condition = 'input.boxcox', 
+                                                                               helpText("Al aplicar la transformacion se crearan nuevas variables para todas
+                                                                                        aquellas que necesiten la transformacion"),
+                                                                               
                                                                                actionButton("apli_cox", "Aplicar")),
+                                                              
+                                                              
+                                                              hr(),
                                                               
                                                               br(), helpText("A continuacion se habilitan los controles necesarios para visualizar
                                                                              la media y la varianza poblacionales estimadas a partir de bootstrapping. 
                                                                              Tambien se proporcionan los IC"),
                                                               
                                                               checkboxInput("media_boot", "Estimar media poblacional", value = F),
-                                                             
+                                                              
                                                               checkboxInput("varianza_boot", "Estimar varianza poblacional", value = F),
                                                               
                                                               conditionalPanel(condition = 'input.media_boot || input.varianza_boot',
@@ -369,29 +381,16 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                                                              h4("Variable 1 con los logaritmos aplicados"), 
                                                                              tableOutput("tabla_log1"))),
                                                      
-                                                     
-                                                     conditionalPanel(condition = 'input.log_apli',
-                                                                      column(width = 5, offset = 0.5,
-                                                                             br(),
-                                                                             h4("Variable 2 con los logaritmos aplicados"), 
-                                                                             tableOutput("tabla_log2")))
-                                                     
-                                                   ), 
-                                                   
-                                                   fluidRow(
                                                      conditionalPanel(condition = 'input.scale_apli',
                                                                       column(width = 5, offset = 0.5,
                                                                              br(),
                                                                              h4("Variable 1 con el escalado aplicado"), 
-                                                                             tableOutput("tabla_scale1")),
-                                                                      
-                                                                      
-                                                                      conditionalPanel(condition = 'input.scale_apli',
-                                                                                       column(width = 5, offset = 0.5,
-                                                                                              br(),
-                                                                                              h4("Variable 2 con escalado aplicado"), 
-                                                                                              tableOutput("tabla_scale2"))))
-                                                   ),
+                                                                             tableOutput("tabla_scale1")))
+                                                     
+                                                     # Aqui tendra que ir la tabla del escalado.
+                                                     
+                                                   ), 
+                                                   
                                                    
                                                    fluidRow(
                                                      conditionalPanel(condition = 'input.media_boot',
@@ -421,7 +420,7 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                                
                                       ), # Fin tabPanel Estudio normalidad
                                       
-                                      tabPanel("Estudio de independencia",
+                                      tabPanel("Intervalos y recuentos",
                                                
                                                sidebarLayout(
                                                  
@@ -437,8 +436,6 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                                               
                                                               helpText("Notese que se emplea la metodologia bootstrap para estimar las proporciones poblacionales"),
                                                               
-                                                              checkboxInput("prop_boot", "Mostrar las proporciones pobacionales estimadas"),
-                                                              
                                                               checkboxInput("plot_recuentos", "Mostrar grafico de los recuentos")
                                                               
                                                               
@@ -449,11 +446,11 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                                    fluidRow(
                                                      column(width = 6, offset = 0.25,
                                                             br(),
-                                                            h4("Intervalos y recuentos varianle 1"),
+                                                            h4("Intervalos y recuentos variable 1"),
                                                             verbatimTextOutput("intervalos_v1")),
                                                      column(width = 6, offset = 0.25,
                                                             br(),
-                                                            h4("Intervalos y recuentos varianle 2"),
+                                                            h4("Intervalos y recuentos variable 2"),
                                                             verbatimTextOutput("intervalos_v2"))
                                                    ),
                                                    
@@ -486,7 +483,181 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                                  
                                                ) # Fin sidebarLayout Estudio de independencia
                                                
-                                      ) # Estudio de independencia
+                                      ), # Estudio de independencia
+                                      
+                                      tabPanel("Diferencia de medias y varianzas",
+                                               
+                                               sidebarLayout(
+                                                 
+                                                 sidebarPanel(width = 2,
+                                                              
+                                                              checkboxInput("dif_med", "Diferencia de medias"),
+                                                              
+                                                              checkboxInput("dif_var", "Diferencia de varianzas"),
+                                                              
+                                                              conditionalPanel(condition = "input.dif_med || input.dif_var",
+                                                                               
+                                                                               uiOutput("selec_var_dif1"),
+                                                                               uiOutput("selec_var_dif2"),
+                                                                               
+                                                                               hr(), br()
+                                                                               
+                                                              ),
+                                                              
+                                                              checkboxInput("dif_med_boo", "Diferencia medias con bootstrap"), 
+                                                              
+                                                              checkboxInput("dif_var_boo", "Diferencia varianzas con bootstrap"), 
+                                                              
+                                                              conditionalPanel(condition = "input.dif_med_boo || input.dif_var_boo",
+                                                                               
+                                                                               
+                                                                               numericInput("repliBoo", "Replicas bootstrap", min = 500,
+                                                                                            max = 5000, value = 1000, step = 100),
+                                                                               
+                                                                               numericInput("confBoo", "Confianza del intervalo", min = 0.05, 
+                                                                                            max = 0.95, value = 0.95, step = 0.05),
+                                                                               
+                                                                               hr(), br(),
+                                                                               
+                                                                               checkboxInput("vis_distrBoo_med", "Mostrar distribucion diferencia de medias"),
+                                                                               
+                                                                               checkboxInput("vis_distrBoo_var", "Mostrar distribucion diferencia varianzas")
+                                                                               
+                                                              )
+                                                              
+                                                              
+                                                 ), # Fin sidebarPanel Diferencia de medias y varianzas
+                                                 
+                                                 mainPanel(
+                                                   
+                                                   conditionalPanel(condition = "input.dif_med",
+                                                                    
+                                                                    fluidRow(
+                                                                      column(width = 4, offset = 0.25,
+                                                                             br(),
+                                                                             h4("Media variable 1"),
+                                                                             verbatimTextOutput("med_v1")),
+                                                                      
+                                                                      column(width = 4, offset = 0.25,
+                                                                             br(),
+                                                                             h4("Media variable 2"),
+                                                                             verbatimTextOutput("med_v2")),
+                                                                      
+                                                                      column(width = 4, offset = 0.25,
+                                                                             br(),
+                                                                             h4("Diferencia de medias"),
+                                                                             verbatimTextOutput("dif_me1me2"))
+                                                                      
+                                                                    )
+                                                                    
+                                                   ),
+                                                   
+                                                   conditionalPanel(condition = "input.dif_var",
+                                                                    
+                                                                    fluidRow(
+                                                                      column(width = 4, offset = 0.25,
+                                                                             br(),
+                                                                             h4("Varianza variable 1"),
+                                                                             verbatimTextOutput("var_v1")),
+                                                                      
+                                                                      column(width = 4, offset = 0.25,
+                                                                             br(),
+                                                                             h4("Varianza variable 2"),
+                                                                             verbatimTextOutput("var_v2")),
+                                                                      
+                                                                      column(width = 4, offset = 0.25,
+                                                                             br(),
+                                                                             h4("Diferencia de Varianza"),
+                                                                             verbatimTextOutput("dif_var1var2"))
+                                                                      
+                                                                    )
+                                                                    
+                                                   ),
+                                                   
+                                                   conditionalPanel(condition = "input.dif_med_boo",
+                                                                    
+                                                                    fluidRow(
+                                                                      column(width = 5, offset = 0.25,
+                                                                             br(),
+                                                                             h4("Estimacion de la diferencia"),
+                                                                             verbatimTextOutput("est_med_boo")),
+                                                                      
+                                                                      column(width = 5, offset = 0.25,
+                                                                             br(),
+                                                                             h4("Intervalos de confianza"),
+                                                                             verbatimTextOutput("ic_med_boo"))
+                                                                      
+                                                                    )
+                                                                    
+                                                   ),
+                                                   
+                                                   conditionalPanel(condition = "input.dif_var_boo",
+                                                                    
+                                                                    fluidRow(
+                                                                      column(width = 5, offset = 0.25,
+                                                                             br(),
+                                                                             h4("Estimacion de la diferencia"),
+                                                                             verbatimTextOutput("est_var_boo")),
+                                                                      
+                                                                      column(width = 5, offset = 0.25,
+                                                                             br(),
+                                                                             h4("Intervalos de confianza"),
+                                                                             verbatimTextOutput("ic_var_boo"))
+                                                                      
+                                                                    )
+                                                                    
+                                                   ), 
+                                                   
+                                                   conditionalPanel(condition = "input.vis_distrBoo_med",
+                                                                    
+                                                                    fluidRow(
+                                                                      column(width = 4, offset = 0.25,
+                                                                             br(),
+                                                                             h4("Densidad e histograma de la diferncia de medias"),
+                                                                             plotlyOutput("plotdifmed")),
+                                                                      
+                                                                      column(width = 4, offset = 0.25,
+                                                                             br(),
+                                                                             h4("QQplot de la diferncia de medias"),
+                                                                             plotlyOutput("qqplotdifmed")),
+                                                                      
+                                                                      column(width = 4, offset = 0.25,
+                                                                             br(),
+                                                                             h4("Test de normalidad de la diferncia de medias"),
+                                                                             verbatimTextOutput("normdifmed"))
+                                                                      
+                                                                    )
+                                                                    
+                                                   ),
+                                                   
+                                                   conditionalPanel(condition = "input.vis_distrBoo_var",
+                                                                    
+                                                                    fluidRow(
+                                                                      column(width = 4, offset = 0.25,
+                                                                             br(),
+                                                                             h4("Densidad e histograma de la diferncia de varianzas"),
+                                                                             plotlyOutput("plotdifvar")),
+                                                                      
+                                                                      column(width = 4, offset = 0.25,
+                                                                             br(),
+                                                                             h4("QQplot de la diferncia de varianzas"),
+                                                                             plotlyOutput("qqplotdifvar")),
+                                                                      
+                                                                      column(width = 4, offset = 0.25,
+                                                                             br(),
+                                                                             h4("Test de normalidad de la diferncia de varianzas"),
+                                                                             verbatimTextOutput("normdifvar"))
+                                                                      
+                                                                    )
+                                                                    
+                                                   )
+                                                   
+                                                   
+                                                 ) # Fin del mainPanel Diferencia de medias y varianzas
+                                                 
+                                               ) # Fin del sidebarLayour Diferencia de medias y varianzas
+                                               
+                                      ) # Fin del tabPanel Diferencia de medias y varianzas
                                       
                                       
                                     ) # Fin tabsetPanel
@@ -507,9 +678,7 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                                               uiOutput("controles2"),
                                                               
                                                               selectInput("tipReg", "Tipo de regresion:",
-                                                                          c("Lineal simple" = "ls",
-                                                                            "Logit" = "logit",
-                                                                            "Loess" = "loess"),
+                                                                          c("Lineal simple" = "ls"),
                                                                           selected = NULL),
                                                               
                                                               checkboxInput("aplicarlogx",
@@ -522,11 +691,7 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                                               uiOutput("controlesApliReg"),
                                                               
                                                               
-                                                              uiOutput("controlesResidLS"),
-                                                              
-                                                              conditionalPanel(condition = "input.tipReg == 'loess'",
-                                                                               numericInput("span", "Span (alisado):",
-                                                                                            label = NULL, min = 0.1, max = 1, step = 0.05))
+                                                              uiOutput("controlesResidLS")
                                                               
                                                               
                                                  ), # Fin sidebarPanel Analisis descriptivo
@@ -536,6 +701,7 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                                    fluidRow(
                                                      
                                                      br(), br(),
+                                                     
                                                      
                                                      column(width = 9, offset = 3,
                                                             h4("Grafica de dispersion"),
@@ -625,43 +791,6 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                     
                            ), # Fin tabPanl Analisis descriptivo
                            
-                           tabPanel("Contrastes",
-                                    sidebarLayout(
-                                      sidebarPanel(width = 2,
-                                                   uiOutput("var1"),
-                                                   uiOutput("var2")
-                                      ), # Fin sidebarPanel Contrastes
-                                      
-                                      mainPanel(
-                                        
-                                        fluidRow(
-                                          column(width = 6, offset = 0.5,
-                                                 br(),br(),
-                                                 h4("Test de Pearson"),
-                                                 br(),
-                                                 verbatimTextOutput("cortest")),
-                                          
-                                          column(width = 6, offset = 0.5,
-                                                 br(),br(),
-                                                 h4("T-test"),
-                                                 br(),
-                                                 verbatimTextOutput("ttest"))
-                                        ), # Fin fluidRow
-                                        
-                                        br(),
-                                        
-                                        fluidRow(
-                                          column(width = 6, offset = 0.5,
-                                                 br(),br(),
-                                                 h4("Test de varianzas"),
-                                                 br(),
-                                                 verbatimTextOutput("vartest"))
-                                        ) # Fin fluidRow
-                                        
-                                      ) # Fin mainPanel Contrastes
-                                    ) # Fin sidebarLayout Contrastes
-                                    
-                           ), # Fin del tabPanel Contrastes
                            
                            tabPanel("Analisis multivariante",
                                     
@@ -755,8 +884,6 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                                                                
                                                                                checkboxInput("dscale", "Escalar los datos"),
                                                                                
-                                                                               checkboxInput("vis_var", "Visualizar la variabilidad de los datos"),
-                                                                               
                                                                                numericInput("num_var", "Variabilidad del modelo. Desde 2 clusters hasta...", value = 1),
                                                                                
                                                                                numericInput("num_centros", "Seleccionar el numero de centros:", value = 1),
@@ -769,12 +896,12 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                                                                
                                                                                actionButton("apli_kmeans", "Aplicar algoritmo")),
                                                               
-                                                             
+                                                              
                                                               
                                                               conditionalPanel(condition = "input.tip_cluster == 'c_jerarquico'", 
                                                                                
                                                                                uiOutput("var_Char"),
-                                                                          
+                                                                               
                                                                                
                                                                                selectInput("usa_distancia", "Distancia a usar:",
                                                                                            c("euclidean" = "euclidean",
@@ -810,10 +937,10 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                                                              h4("Visualizacion de los grupos"),
                                                                              verbatimTextOutput("grupos")),
                                                                       
-                                                                     
+                                                                      
                                                                       column(width = 12, offset = 2,  br(),
                                                                              h4("Grafico del cluster"),
-                                                                             plotOutput("cluster_jer",  "1000px"))
+                                                                             plotOutput("cluster_jer",  "1200px"))
                                                                     )),
                                                    
                                                    conditionalPanel(condition = "input.tip_cluster == 'c_kmeans'",
@@ -848,77 +975,104 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                            ) # Fin del tabPanel Analisis multivariante
                            
                 ) # Fin navbarPage
-) # Fin fluidPage
+                ) # Fin fluidPage
 
 
 
 server <- function(input, output) {
   
- 
   
-  datos_2 <- NULL
+  ### GENERADORES DE FUNCIONES ###
   
+  
+  datos_2 = NULL
   normal = eventReactive(input$creaNorm, {
     
-    if(input$creaNorm > 0){ 
+    if(input$creaNorm > 0){
       
       norm = rnorm(isolate(input$nNorm), isolate(input$media), isolate(input$varianza))
       
-      if (is.null(datos_2) | (nrow(datos_2) != length(norm))){
+      if(is.null(datos_2) || (nrow(datos_2) != length(norm))){
         
-        datos_2 <- cbind(norm)
+        datos_2 <<- cbind(norm)
         
-      }else{ 
+      }else{
         
-        datos_2 <- cbind(datos_2, norm)
+        datos_2 <<- cbind(datos_2, norm)
         
-      } 
+      }
       
     }
     
-    datos_2
+    datos_2 = datos_2
+    return(datos_2)
     
   })
   
-  
   datos_3 <- NULL
-  
   binomial = eventReactive(input$creaBinom, {
     
     if(input$creaBinom > 0){ 
       
       binom = rbinom(isolate(input$nBin), isolate(input$tamanno), isolate(input$prob))
       
-      if (is.null(datos_3) | (nrow(datos_3) != length(binom))){
+      if (is.null(datos_3) || (nrow(datos_3) != length(binom))){
         
-        datos_3 <- cbind(binom)
+        datos_3 <<- cbind(binom)
         
       }else{ 
         
-        datos_3 <- cbind(datos_3, binom)
+        datos_3 <<- cbind(datos_3, binom)
         
       } 
       
     }
     
-    datos_3
-    
+    datos_3 = datos_3
+    return(datos_3)
     
   })
   
+  datos_4 = NULL
   poiss = eventReactive(input$creaPoiss, {
-    pois = rpois(isolate(input$nPois), isolate(input$lambda))
+    
+    if(input$creaPoiss > 0){ 
+      
+      pois = rpois(isolate(input$nPois), isolate(input$lambda))
+      
+      if (is.null(datos_4) || (nrow(datos_4) != length(pois))){
+        
+        datos_4 <<- cbind(pois)
+        
+      }else{ 
+        
+        datos_4 <<- cbind(datos_4, pois)
+        
+      } 
+      
+    }
+    
+    datos_4 = datos_4
+    return(datos_4)
     
   }) 
   
-  
-  
   datos2 = reactive({
     
-    datos = cbind(normal(), binomial())
-    datos = as.data.frame(datos); datos
+    datos = NULL
+    
+    if(input$creaNorm > 0){ datos = cbind(datos, normal()) }else{ datos = datos }
+    if(input$creaBinom > 0){ datos = cbind(datos, binomial()) }else{ datos = datos }
+    if(input$creaPoiss > 0){ datos = cbind(datos, poiss()) }else{ datos = datos }
+    
+    datos = data.frame(datos)
     
   })
+  
+  
+  
+  
+  ### GENERADOR CAMBIO NAs ###  
   
   datos_pred_NA = eventReactive(input$camb_NA_pred, {
     
@@ -928,17 +1082,21 @@ server <- function(input, output) {
   
   
   
+  ### LECTURA Y VISUALIZACION DE DATOS ### 
+  
   infile = reactive({
     
     infile = input$subirDat
     
   })
   
+  
+  dat2 = NULL
   datos = reactive({
     
     dat = data.frame()
     
-    if(is.null(infile())){dat = datos2()}else{
+    if(is.null(infile())){ dat = datos2() }else{
       
       dat = read.csv2(infile()$datapath, 
                       h = input$header, 
@@ -947,7 +1105,7 @@ server <- function(input, output) {
                       quote = input$quote,
                       na.strings = "NA")}
     
-    if(!is.null(infile()) & input$camb_NA_pred == T){dat = datos_pred_NA()}else{dat}
+    if(!is.null(infile()) & input$camb_NA_pred == T){ dat = datos_pred_NA() }else{dat}
     
     if(!is.null(infile()) & input$camb_NA_media == T){
       
@@ -961,19 +1119,47 @@ server <- function(input, output) {
       }
       colnames(dat_med) = nomb; return(dat_med)}else{dat}
     
-    if(!is.null(infile()) & input$camb_NA_eliminar == T){dat = na.omit(dat)}else{dat}
+    if(!is.null(infile()) & input$camb_NA_eliminar == T){ dat = na.omit(dat) }else{dat}
     
-    if(!is.null(infile()) & input$apli_logBOTON == T){
+    if(!is.null(infile()) &  input$log_apli == T & input$apli_logBOTON > 0){
       
-      dat = mutate(dat, logVar1 = log(dat[,isolate(input$varLog1)]), 
-                   logVar2 = log(dat[,isolate(input$varLog2)]))
+      d2 = NULL
+      d2 = data.frame(log(dat[,input$varLog1]))
+      colnames(d2) = paste("log_", isolate(input$varLog1), sep =  "")
+      
+      if(is.null(dat2)){
+        
+        dat2 <<- cbind(d2)
+        
+      }else{
+        
+        if(input$apli_logBOTON > 1) dat2 <<- cbind(dat2, d2)
+        
+      }
+      
+      dat = cbind(dat, dat2)  
+      return(dat)
       
     }else{dat}
     
-    if(!is.null(infile()) & input$apli_scaleBOTON == T){
+    if(!is.null(infile()) & input$scale_apli == T & input$apli_scaleBOTON > 0){
       
-      dat = mutate(dat, scaleVar1 = scale(dat[,isolate(input$varScale1)]), 
-                   scaleVar2 = scale(dat[,isolate(input$varScale2)]))
+      d3 = NULL
+      d3 = data.frame(scale(dat[,input$varScale1]))
+      colnames(d3) = paste("sc_", isolate(input$varScale1), sep =  "")
+      
+      if(is.null(dat2)){
+        
+        dat2 <<- cbind(d3)
+        
+      }else{
+        
+        if(input$apli_scaleBOTON > 1) dat2 <<- cbind(dat2, d3)
+        
+      }
+      
+      dat = cbind(dat, dat2)  
+      return(dat)
       
     }else{dat}
     
@@ -996,7 +1182,7 @@ server <- function(input, output) {
       
     }else{dat}
     
-  }) # Falta meter lo que queda
+  }) 
   
   
   
@@ -1013,7 +1199,7 @@ server <- function(input, output) {
   
   # Estudio preliminar
   
-    # SUMMARY Y CLASS
+  # SUMMARY Y CLASS
   
   output$summaryDa = renderPrint({
     
@@ -1028,7 +1214,7 @@ server <- function(input, output) {
   }) # Clase de los datos
   
   
-    # ESTUDIO NAS
+  # ESTUDIO NAS
   
   output$diagnostico_NA = renderPlot({
     
@@ -1115,12 +1301,12 @@ server <- function(input, output) {
   
   
   # Estudio normalidad
-    
-      # TEST NORMALIDAD
+  
+  # TEST NORMALIDAD
   
   output$var_normalidad = renderUI({
     selectInput("selecVar_normtest", "Seleccionar variable:",
-                choices = names(datos()), selected = NULL)
+                choices = names(datos_cj()), selected = NULL)
   }) # Variable a estudiar la normalidad
   
   estNorm = reactive({
@@ -1133,67 +1319,51 @@ server <- function(input, output) {
   })
   
   output$test_normPearson = renderPrint({
+    
     pearson.test(estNorm()[,1])
+    
   }) # Test de normalidad Pearson
-  
   output$test_normSP = renderPrint({
+    
     shapiro.test(estNorm()[,1])
-  }) # Test de normalidad KS
+    
+  }) # Test de normalidad SP
   
   
   output$var_log1 = renderUI({
-    selectInput("varLog1", "Seleccionar variable 1:",
-                choices = names(datos()), selected = NULL)
-  }) # Variable a logaritmizar 1
-  output$var_log2 = renderUI({
-    selectInput("varLog2", "Seleccionar variable 2:",
-                choices = names(datos()), selected = NULL)
-  }) # Variable a logaritmizar 2
-  
-  
+    
+    selectInput("varLog1", "Seleccionar variable:",
+                choices = names(isolate(datos_cj())), selected = NULL)
+    
+  }) # Variable a logaritmizar 
   output$tabla_log1 = renderTable({
-    dl = data.frame(datos()[,input$varLog1])
-    logTran = data.frame(log(dl))
     
-    dl = cbind(dl, logTran); colnames(dl) = c(input$varLog1, "logVar1"); head(dl, 10)
+    d2 = data.frame(datos()[,colnames(datos()) == input$varLog1])
+    d2 = cbind(d2, log(d2))
+    colnames(d2) = c(input$varLog1, paste("log_", input$varLog1, sep =  ""))
+    head(d2, 10)
     
-  }) # Tabla de logaritmizacion 1
-  output$tabla_log2 = renderTable({
-    dl = data.frame(datos()[, input$varLog2])
-    logTran = data.frame(log(dl))
-    
-    dl = cbind(dl, logTran); colnames(dl) = c(input$varLog2, "logVar2"); head(dl, 10)
-    
-  }) # Tabla de logaritmizacion 2
+  }) # Tabla de logaritmizacion 
   
   
   output$var_scale1 = renderUI({
-    selectInput("varScale1", "Seleccionar variable 1:",
-                choices = names(datos()), selected = NULL)
-  }) # Variable a escalar 1
-  output$var_scale2 = renderUI({
-    selectInput("varScale2", "Seleccionar variable 2:",
-                choices = names(datos()), selected = NULL)
-  }) # Variable a escalar 2
-  
+    
+    selectInput("varScale1", "Seleccionar variable:",
+                choices = names(isolate(datos_cj())), selected = NULL)
+    
+  }) # Variable a escalar 
   output$tabla_scale1 = renderTable({
-    dl = data.frame(datos()[, isolate(input$varScale1)])
-    scaleTran = data.frame(scale(dl))
     
-    dl = cbind(dl, scaleTran); colnames(dl) = c(isolate(input$varScale1), "scaleVar1"); head(dl, 10)
+    d2 = data.frame(datos()[,colnames(datos()) == input$varScale1])
+    d2 = cbind(d2, scale(d2))
+    colnames(d2) = c(input$varScale1, paste("sc_", input$varScale1, sep =  ""))
+    head(d2, 10)
     
-  }) # Tabla de escalado 1
-  output$tabla_scale2 = renderTable({
-    dl = data.frame(datos()[, isolate(input$varScale2)])
-    scaleTran = data.frame(scale(dl))
-    
-    dl = cbind(dl, scaleTran); colnames(dl) = c(isolate(input$varScale2), "scaleVar2"); head(dl, 10)
-    
-  }) # Tabla de escalado 2
+  }) # Tabla de escalado 
   
   
-
-
+  
+  ### ESTIMACIONES BOOTSTRAP ###
   
   output$est_media = renderPrint({
     
@@ -1201,7 +1371,6 @@ server <- function(input, output) {
     mean(medBo$thetastar)
     
   }) # Media bootstrap
-  
   output$est_varianza = renderPrint({
     
     medBo = bootstrap(datos()[,input$selecVar_normtest], input$repli, var)
@@ -1210,35 +1379,39 @@ server <- function(input, output) {
   }) # Varianza bootstrap
   
   
-  
   icBoot = reactive({
+    
     mean.boot = function(x,ind){
       return(c(mean(x[ind]), var(x[ind])))
     }
+    
     bb = boot(datos()[,input$selecVar_normtest], mean.boot, input$repli)
-    bb
-  })
+    return(bb)
+    
+  }) # Contiene la funcion que calcula los IC de la med. o la var.
   
   output$ic_est_media = renderPrint({
     boot.ci(icBoot(), index = 1, conf = input$confianza)
   }) # IC para media bootstrap 
-  
   output$ic_est_varianza = renderPrint({
+    
     boot.ci(icBoot(), index = 2, conf = input$confianza)
+    
   }) # IC para varianza bootstrap
   
   
+  ### INTERVALOS Y RECUENTOS ### 
+  
   output$var_ind1 = renderUI({
     selectInput("varInd1", "Seleccionar variable 1:", 
-                choices = names(datos()), selected = NULL)
-  }) # Variable 1 para independencia
+                choices = names(datos_cj()), selected = NULL)
+  }) # Variable 1 
   output$var_ind2 = renderUI({
     selectInput("varInd2", "Seleccionar variable 2:", 
-                choices = names(datos()), selected = NULL)
-  }) # Variable 2 para independencia
+                choices = names(datos_cj()), selected = NULL)
+  }) # Variable 2 
   
-  
-  output$intervalos_v1 = renderPrint({
+  intV1 = reactive({
     
     r = range(datos()[,input$varInd1])
     cs = nclass.Sturges(datos()[,input$varInd1])
@@ -1247,10 +1420,16 @@ server <- function(input, output) {
     intervalos = cut(datos()[,input$varInd1], breaks = li, include.lowest = T)
     
     int = data.frame(table(intervalos)); colnames(int) = c("Intervalos", "Frecuencia")
-    int
+    return(int)
+    
+  }) # Calcula los intervalos y sus frecuencias de la variable 1
+  output$intervalos_v1 = renderPrint({
+    
+    intV1()
+    
   })
   
-  output$intervalos_v2 = renderPrint({
+  intV2 = reactive({
     
     r = range(datos()[,input$varInd2])
     cs = nclass.Sturges(datos()[,input$varInd2])
@@ -1259,48 +1438,33 @@ server <- function(input, output) {
     intervalos = cut(datos()[,input$varInd2], breaks = li, include.lowest = T)
     
     int = data.frame(table(intervalos)); colnames(int) = c("Intervalos", "Frecuencia")
-    int
+    return(int)
+    
+  }) # Calcula los intervalos y sus frecuencias de la variable 2
+  output$intervalos_v2 = renderPrint({
+    
+    intV2()
+    
   })
   
   output$prop_v1 = renderPrint({
     
-    r = range(datos()[,input$varInd1])
-    cs = nclass.Sturges(datos()[,input$varInd1])
-    li = seq(r[1], r[2], length = cs)
+    proporciones = cbind.data.frame(intV1()$Frecuencia / sum(intV1()$Frecuencia), (intV1()$Frecuencia / sum(intV1()$Frecuencia)*100)); colnames(proporciones) = c("Proporciones", "Porcentaje")
     
-    intervalos = cut(datos()[,input$varInd1], breaks = li, include.lowest = T)
+    return(proporciones)
     
-    int = data.frame(table(intervalos)); colnames(int) = c("Intervalos", "Frecuencia")
-    proporciones = cbind.data.frame(int$Frecuencia / sum(int$Frecuencia), (int$Frecuencia / sum(int$Frecuencia)*100)); colnames(proporciones) = c("Proporciones", "Porcentaje")
-    
-    proporciones
-    
-  })
+  }) 
   output$prop_v2 = renderPrint({
     
-    r = range(datos()[,input$varInd2])
-    cs = nclass.Sturges(datos()[,input$varInd2])
-    li = seq(r[1], r[2], length = cs)
+    proporciones = cbind.data.frame(intV2()$Frecuencia / sum(intV2()$Frecuencia), (intV2()$Frecuencia / sum(intV2()$Frecuencia)*100)); colnames(proporciones) = c("Proporciones", "Porcentaje")
     
-    intervalos = cut(datos()[,input$varInd2], breaks = li, include.lowest = T)
+    return(proporciones)
     
-    int = data.frame(table(intervalos)); colnames(int) = c("Intervalos", "Frecuencia")
-    proporciones = cbind.data.frame(int$Frecuencia / sum(int$Frecuencia), (int$Frecuencia / sum(int$Frecuencia)*100)); colnames(proporciones) = c("Proporciones", "Porcentaje")
-    
-    proporciones
   })
   
   output$plot_v1 = renderPlotly({
     
-    r = range(datos()[,input$varInd1])
-    cs = nclass.Sturges(datos()[,input$varInd1])
-    li = seq(r[1], r[2], length = cs)
-    
-    intervalos = cut(datos()[,input$varInd1], breaks = li, include.lowest = T)
-    
-    int = data.frame(table(intervalos)); colnames(int) = c("Intervalos", "Frecuencia")
-    
-    ggplot(int, aes(Intervalos, Frecuencia)) + 
+    ggplot(intV1(), aes(Intervalos, Frecuencia)) + 
       geom_bar(stat = 'identity', width = 0.10) +
       ggtitle("Grafico de recuentos") +
       xlab(input$varInd1) + 
@@ -1308,18 +1472,9 @@ server <- function(input, output) {
       theme_bw()
     
   }) # Plot recuentos 1
-  
   output$plot_v2 = renderPlotly({
     
-    r = range(datos()[,input$varInd2])
-    cs = nclass.Sturges(datos()[,input$varInd2])
-    li = seq(r[1], r[2], length = cs)
-    
-    intervalos = cut(datos()[,input$varInd2], breaks = li, include.lowest = T)
-    
-    int = data.frame(table(intervalos)); colnames(int) = c("Intervalos", "Frecuencia")
-    
-    ggplot(int, aes(Intervalos, Frecuencia)) + 
+    ggplot(intV2(), aes(Intervalos, Frecuencia)) + 
       geom_bar(stat = 'identity', width = 0.10) +
       ggtitle("Grafico de recuentos") +
       xlab(input$varInd2) + 
@@ -1329,20 +1484,210 @@ server <- function(input, output) {
   }) # Plot recuentos 2
   
   
+  ### DIFERENCIA DE MEDIAS Y VARIANZAS ###
+  
+  output$selec_var_dif1 = renderUI({
+    
+    selectInput("varDif1", "Seleccionar variable 2:", 
+                choices = names(datos_cj()), selected = NULL)
+    
+  })
+  output$selec_var_dif2 = renderUI({
+    
+    selectInput("varDif2", "Seleccionar variable 2:", 
+                choices = names(datos_cj()), selected = NULL)
+    
+  })
+  
+  ### Medias y diferencias estimador estandar
+  
+  output$med_v1 = renderPrint({
+    
+    mean(datos()[,input$varDif1])
+    
+  })
+  
+  output$med_v2 = renderPrint({
+    
+    mean(datos()[,input$varDif2])
+    
+  })
+  
+  output$dif_me1me2 = renderPrint({
+    
+    mean(datos()[,input$varDif1]) -  mean(datos()[,input$varDif2])
+    
+  })
+  
+  ### Varianzas y diferencias estimador estandar
+  
+  output$var_v1 = renderPrint({
+    
+    var(datos()[,input$varDif1])
+    
+  })
+  
+  output$var_v2 = renderPrint({
+    
+    var(datos()[,input$varDif2])
+    
+  })
+  
+  output$dif_var1var2 = renderPrint({
+    
+    var(datos()[,input$varDif1]) - var(datos()[,input$varDif2])
+    
+  })
+  
+  ### Bootstrapping para diferencia de estimadores ###
+  
+  bootdif_med = reactive({
+    
+    diferencia_medias <- function(data, i) {
+      
+      pseudomuestra <- data[i,]
+      
+      mean_1 <- mean(pseudomuestra[, input$varDif1])
+      mean_2 <- mean(pseudomuestra[, input$varDif2])
+      
+      return(mean_1 - mean_2)
+    }
+    
+    
+    boot_distribution <- boot(data = datos(), statistic = diferencia_medias, R = input$repliBoo)
+    return(boot_distribution)
+    
+  })
+  
+  bootdif_var = reactive({
+    
+    diferencia_varianzas <- function(data, i) {
+      
+      pseudomuestra <- data[i,]
+      
+      var_1 <- var(pseudomuestra[, input$varDif1])
+      var_2 <- var(pseudomuestra[, input$varDif2])
+      
+      return(var_1 - var_2)
+    }
+    
+    
+    boot_distribution <- boot(data = datos(), statistic = diferencia_varianzas, R = input$repliBoo)
+    return(boot_distribution)
+    
+  })
+  
+  output$est_med_boo = renderPrint({
+    
+    bootdif_med()
+    
+  })
+  output$est_var_boo = renderPrint({
+    
+    bootdif_var()
+    
+  })
+  
+  output$ic_med_boo = renderPrint({
+    
+    boot.ci(bootdif_med())
+    
+  })
+  output$ic_var_boo = renderPrint({
+    
+    boot.ci(bootdif_var())
+    
+  })
+  
+  output$plotdifmed = renderPlotly({
+    
+    bootdif_med = data.frame(Estadisticos = bootdif_med()$t)
+    
+    ggplot(data = bootdif_med, aes(Estadisticos)) +
+      geom_histogram(aes(y = ..density..), alpha = 0.4, colour = "white") + 
+      geom_line(aes(y = ..density..), stat = 'density', colour = "red") +
+      geom_vline(xintercept = mean(bootdif_med$Estadisticos)) +
+      geom_vline(xintercept = quantile(bootdif_med$Estadisticos)[2], colour = "blue") +
+      geom_vline(xintercept = quantile(bootdif_med$Estadisticos)[4], colour = "blue") +
+      labs(x = "Diferencia de medias") +
+      theme_bw()
+    
+    
+  })
+  output$qqplotdifmed = renderPlotly({
+    
+    bootdif_med = data.frame(Estadisticos = bootdif_med()$t)
+    
+    ggplot(bootdif_med, aes(sample = Estadisticos)) + 
+      stat_qq(position = "identity", col = "brown3") + 
+      stat_qq_line(size = 1) + 
+      ylab("Teorica") + xlab("Muestra") +
+      theme_bw()
+    
+    
+  })
+  output$normdifmed = renderPrint({
+    
+    bootdif_med = data.frame(Estadisticos = bootdif_med()$t)
+    
+    shapiro.test(bootdif_med$Estadisticos)
+    
+  }) 
+  
+  ### ESTUDIO DIFERENCIA VARIANZAS ###
+  
+  output$plotdifvar = renderPlotly({
+    
+    bootdif_var = data.frame(Estadisticos = bootdif_var()$t)
+    
+    ggplot(data = bootdif_var, aes(Estadisticos)) +
+      geom_histogram(aes(y = ..density..), alpha = 0.4, colour = "white") + 
+      geom_line(aes(y = ..density..), stat = 'density', colour = "red") +
+      geom_vline(xintercept = mean(bootdif_var$Estadisticos)) +
+      geom_vline(xintercept = quantile(bootdif_var$Estadisticos)[2], colour = "blue") +
+      geom_vline(xintercept = quantile(bootdif_var$Estadisticos)[4], colour = "blue") +
+      labs(x = "Diferencia de varianzas") +
+      theme_bw()
+    
+    
+  }) # Distribucion diferencia de varianzas
+  output$qqplotdifvar = renderPlotly({
+    
+    bootdif_var = data.frame(Estadisticos = bootdif_var()$t)
+    
+    ggplot(bootdif_var, aes(sample = Estadisticos)) + 
+      stat_qq(position = "identity", col = "brown3") + 
+      stat_qq_line(size = 1) + 
+      ylab("Teorica") + xlab("Muestra") +
+      theme_bw()
+    
+    
+  }) # QQ-plot
+  output$normdifvar = renderPrint({
+    
+    bootdif_var = data.frame(Estadisticos = bootdif_var()$t)
+    
+    shapiro.test(bootdif_var$Estadisticos)
+    
+  }) # SWtest para la distrinucion de la diferencia de varianzas
+  
+  
+  ### GRAFICA DE DISPERSION Y REGRESION ###
   
   output$controles1 = renderUI({
     
     selectInput("selectvarX", "Seleccionar variable X:",
-                choices = names(datos()),
+                choices = names(isolate(datos())),
                 selected = 1)
-  }) # Tiene que estar siempre
-  
+    
+  }) 
   output$controles2 = renderUI({
     
     selectInput("selectvarY", "Seleccionar variable Y:",
-                choices = names(datos()),
+                choices = names(isolate(datos())),
                 selected = 1)
-  }) # Tiene que estar siempre
+    
+  }) 
   
   output$plotdisp = renderPlotly({
     
@@ -1409,34 +1754,30 @@ server <- function(input, output) {
         theme_bw()
     }
     
-  }) # Tiene que estar siempre ############ PROBLEMA AQUI
-  
-  
+  }) # Plot de dispersion
   
   
   output$controlesApliReg = renderUI({
-    
     
     checkboxInput("aplicarReg",
                   "Aplicar regresion")
     
     
-  }) # Tiene que estar siempre
-  
+  }) 
   
   output$controlesResidLS = renderUI({
     
     conditionalPanel(
-      condition = "input.tipReg == 'ls'",
+      condition = 'input.aplicarReg',
       checkboxInput("visResid",
                     "Visualizar residuos"))
     
-  }) # Solo en RLS
+  })
   
   
   output$smLS = renderUI({
     
-    conditionalPanel(condition = "input.tipReg == 'ls' && 'input.aplicarReg'",
+    conditionalPanel(condition = 'input.aplicarReg',
                      br(), br(),
                      h4("Regresion lineal simple"),
                      verbatimTextOutput("summaryregLS"))
@@ -1447,31 +1788,75 @@ server <- function(input, output) {
     
     dat = cbind.data.frame(datos()[,input$selectvarY], datos()[,input$selectvarX])
     colnames(dat) = c(input$selectvarY, input$selectvarX)
+    
     if(input$aplicarlogx == T){
       
       colnames(dat) = c(input$selectvarY, paste("log_", input$selectvarX, sep = ""))
       
-    }else{colnames(dat) = c(input$selectvarY, input$selectvarX)}
+    }else{
+      
+      colnames(dat) = c(input$selectvarY, input$selectvarX)
+      
+    }
+    
     if(input$aplicarlogy == T){
       
       colnames(dat) = c(paste("log_", input$selectvarY, sep = ""), input$selectvarX)
       
-    }else{colnames(dat) = c(input$selectvarY, input$selectvarX)}
+    }else{
+      
+      colnames(dat) = c(input$selectvarY, input$selectvarX)
+      
+    }
+    
     if(input$aplicarlogx == T & input$aplicarlogy == T){
       
       colnames(dat) = c(paste("log_", input$selectvarY, sep = ""), paste("log_", input$selectvarX, sep = ""))
       
-    }else{colnames(dat) = c(input$selectvarY, input$selectvarX)}
+    }else{
+      
+      colnames(dat) = c(input$selectvarY, input$selectvarX)
+      
+    }
     
-    dat
-  
-    })
-  
+    return(dat)
+    
+  }) # Selecciona los datos para la regresion
   regRLS = reactive({
     
-    if(input$aplicarReg == TRUE){
+    if(input$aplicarReg == T){
       
-      reg = lm(datRLS()[,1] ~ ., data = datRLS())
+      reg = lm(datos()[,input$selectvarY] ~ datos()[,input$selectvarX], data = datos())
+      
+      if(input$aplicarlogx == T){
+        
+        reg = lm(datos()[,input$selectvarY] ~ log(datos()[,input$selectvarX]), data = datos())
+        
+      }else{
+        
+        reg
+        
+      }
+      
+      if(input$aplicarlogy == T){
+        
+        reg = lm(log(datos()[,input$selectvarY]) ~ datos()[,input$selectvarX], data = datos())
+        
+      }else{
+        
+        reg 
+        
+      }
+      
+      if(input$aplicarlogx == T && input$aplicarlogy == T){
+        
+        reg = lm(log(datos()[,input$selectvarY]) ~ log(datos()[,input$selectvarX]), data = datos())
+        
+      }else{
+        
+        reg
+        
+      }
       
     }else{
       
@@ -1479,37 +1864,7 @@ server <- function(input, output) {
       
     }
     
-    if(input$aplicarlogx == T){
-      
-      reg = lm(datRLS()[,1] ~ log(datRLS()[,2]), data = datRLS())
-      
-    }else{
-      
-      reg = lm(datRLS()[,1] ~ datRLS()[,2], data = datRLS())
-      
-    }
-    
-    if(input$aplicarlogy == T){
-      
-      reg = lm(log(datRLS()[,1]) ~ datRLS()[,2], data = datRLS())
-      
-    }else{
-      
-      reg = lm(datRLS()[,1] ~ datRLS()[,2], data = datRLS())
-      
-    }
-    
-    if(input$aplicarlogy == T & input$aplicarlogx == T){
-      
-      reg = lm(log(datRLS()[,1]) ~ log(datRLS()[,2]), data = datRLS())
-      
-    }else{
-      
-      reg = lm(datRLS()[,1] ~ datRLS()[,2], data = datRLS())
-      
-    }
-    
-  })
+  }) # Realiza las regresiones
   
   output$summaryregLS = renderPrint({
     
@@ -1517,76 +1872,14 @@ server <- function(input, output) {
     
   }) # Solo en RLS
   
-  output$smLOE = renderUI({
-    
-    conditionalPanel(condition = "input.tipReg == 'loess' && 'input.aplicarReg'",
-                     br(), br(),
-                     h4("Regresion lineal simple"),
-                     verbatimTextOutput("summaryregLOE"))
-    
-  }) # LOESS conditionalPanel sm
-  
-  output$summaryregLOE = renderPrint({
-    
-    if(input$aplicarReg == TRUE){
-      
-      reg = loess(datos()[,input$selectvarY] ~ datos()[,input$selectvarX], span = input$span)
-      summary(reg)
-      
-    }else{
-      
-      return(NULL)
-      
-    }
-    
-    if(input$aplicarlogx == T){
-      
-      reg = loess(datos()[,input$selectvarY] ~ log(datos()[,input$selectvarX]), span = input$span)
-      summary(reg)
-      
-    }else{
-      
-      reg = loess(datos()[,input$selectvarY] ~ datos()[,input$selectvarX], span = input$span)
-      summary(reg)
-      
-    }
-    
-    if(input$aplicarlogy == T){
-      
-      reg = loess(log(datos()[,input$selectvarY]) ~ datos()[,input$selectvarX], span = input$span)
-      summary(reg)
-      
-    }else{
-      
-      reg = loess(datos()[,input$selectvarY] ~ datos()[,input$selectvarX], span = input$span)
-      summary(reg)
-      
-    }
-    
-    if(input$aplicarlogy == T & input$aplicarlogx == T){
-      
-      reg = loess(log(datos()[,input$selectvarY]) ~ log(datos()[,input$selectvarX]), span = input$span)
-      summary(reg)
-      
-    }else{
-      
-      reg = loess(datos()[,input$selectvarY] ~ datos()[,input$selectvarX], span = input$span)
-      summary(reg)
-      
-    }
-    
-    
-  }) # LOESS verbatimtextOutput summary
-  
-  
   output$plResidLS = renderUI({
     
-    conditionalPanel(condition = "input.tipReg == 'ls' && 'input.aplicarReg'",
+    conditionalPanel(condition = 'input.visResid',
                      br(), br(),
                      h4("Variable X vs residuos"),
                      plotlyOutput("plotResidLS", width = "500px"))
     
-  })
+  }) # plotlyOutput para residuos
   output$plotResidLS = renderPlotly({
     
     if(input$visResid){
@@ -1610,7 +1903,7 @@ server <- function(input, output) {
       reg = lm(datos()[,input$selectvarY] ~ log(datos()[,input$selectvarX]), data = datos())
       residuos = data.frame(residuals(reg)); residuos = data.frame(residuos[,1]);
       
-      p = ggplot(data = datos(), aes(datos()[,input$selectvarX], residuos[,1])) + 
+      p = ggplot(data = datos(), aes(log(datos()[,input$selectvarX]), residuos[,1])) + 
         xlab(input$selectvarX) + 
         ylab("Residuos")
       
@@ -1665,7 +1958,7 @@ server <- function(input, output) {
       reg = lm(log(datos()[,input$selectvarY]) ~ log(datos()[,input$selectvarX]), data = datos())
       residuos = data.frame(residuals(reg)); residuos = data.frame(residuos[,1]);
       
-      p = ggplot(data = datos(), aes(datos()[,input$selectvarX], residuos[,1])) + 
+      p = ggplot(data = datos(), aes(log(datos()[,input$selectvarX]), residuos[,1])) + 
         xlab(input$selectvarX) + 
         ylab("Residuos")
       
@@ -1688,28 +1981,11 @@ server <- function(input, output) {
       
     }
     
-  }) # Solo en RLS
+  }) # plotlyOutput para residuos
   
-  output$plResidLOE = renderUI({
-    
-    conditionalPanel(condition = "input.tipReg == 'loess' && 'input.aplicarReg'",
-                     br(), br(),
-                     h4("Variable X vs residuos"),
-                     plotlyOutput("plotResidLOE", width = "500px"))
-    
-  }) # LOESS conditionalPanel plResid
-  
-  output$hisResidLOE = renderUI({
-    conditionalPanel(condition = "input.tipReg == 'loess' && 'input.aplicarReg'",
-                     br(), br(),
-                     h4("Distribucion de los residuos"),
-                     plotlyOutput("histResidLOE", width = "500px"))
-    
-    
-  }) # LOESS conditionalPanel hisResid
   
   output$hisResidLS = renderUI({
-    conditionalPanel(condition = "input.tipReg == 'ls' && 'input.aplicarReg'",
+    conditionalPanel(condition = 'input.visResid',
                      br(), br(),
                      h4("Distribucion de los residuos"),
                      plotlyOutput("histResidLS", width = "500px"))
@@ -1731,15 +2007,10 @@ server <- function(input, output) {
       pp = p + geom_histogram(aes(y = ..density..), 
                               breaks = bar, 
                               fill = '#75AADB',
-                              colour = "black", 
-                              alpha = 0.32) +
-        geom_density(kernel = "gaussian", 
-                     col = "brown3",
-                     linetype = 1,
-                     size = 0.75) +
-        
-        theme_bw()
-      
+                              colour = "white", 
+                              alpha = 0.4) + 
+        geom_line(aes(y = ..density..), stat = 'density', colour = "brown3") + 
+        theme_bw()  
       
     }else{return(NULL)}
     
@@ -1756,14 +2027,10 @@ server <- function(input, output) {
       pp = p + geom_histogram(aes(y = ..density..), 
                               breaks = bar, 
                               fill = '#75AADB',
-                              colour = "black", 
-                              alpha = 0.32) +
-        geom_density(kernel = "gaussian", 
-                     col = "brown3",
-                     linetype = 1,
-                     size = 0.75) +
-        
-        theme_bw()
+                              colour = "white", 
+                              alpha = 0.4) +
+        geom_line(aes(y = ..density..), stat = 'density', colour = "brown3") + 
+        theme_bw()     
       
     }else{
       
@@ -1778,14 +2045,10 @@ server <- function(input, output) {
       pp = p + geom_histogram(aes(y = ..density..), 
                               breaks = bar, 
                               fill = '#75AADB',
-                              colour = "black", 
-                              alpha = 0.32) +
-        geom_density(kernel = "gaussian", 
-                     col = "brown3",
-                     linetype = 1,
-                     size = 0.75) +
-        
-        theme_bw()
+                              colour = "white", 
+                              alpha = 0.4) +
+        geom_line(aes(y = ..density..), stat = 'density', colour = "brown3") + 
+        theme_bw()     
     }
     
     if(input$visResid &input$aplicarlogy){
@@ -1801,14 +2064,10 @@ server <- function(input, output) {
       pp = p + geom_histogram(aes(y = ..density..), 
                               breaks = bar, 
                               fill = '#75AADB',
-                              colour = "black", 
-                              alpha = 0.32) +
-        geom_density(kernel = "gaussian", 
-                     col = "brown3",
-                     linetype = 1,
-                     size = 0.75) +
-        
-        theme_bw()
+                              colour = "white", 
+                              alpha = 0.4) +
+        geom_line(aes(y = ..density..), stat = 'density', colour = "brown3") + 
+        theme_bw()     
       
     }else{
       
@@ -1823,14 +2082,10 @@ server <- function(input, output) {
       pp = p + geom_histogram(aes(y = ..density..), 
                               breaks = bar, 
                               fill = '#75AADB',
-                              colour = "black", 
-                              alpha = 0.32) +
-        geom_density(kernel = "gaussian", 
-                     col = "brown3",
-                     linetype = 1,
-                     size = 0.75) +
-        
-        theme_bw()
+                              colour = "white", 
+                              alpha = 0.4) +
+        geom_line(aes(y = ..density..), stat = 'density', colour = "brown3") + 
+        theme_bw()     
       
     }
     
@@ -1847,14 +2102,10 @@ server <- function(input, output) {
       pp = p + geom_histogram(aes(y = ..density..), 
                               breaks = bar, 
                               fill = '#75AADB',
-                              colour = "black", 
-                              alpha = 0.32) +
-        geom_density(kernel = "gaussian", 
-                     col = "brown3",
-                     linetype = 1,
-                     size = 0.75) +
-        
-        theme_bw()
+                              colour = "white", 
+                              alpha = 0.4) +
+        geom_line(aes(y = ..density..), stat = 'density', colour = "brown3") + 
+        theme_bw()     
       
     }else{
       
@@ -1869,18 +2120,14 @@ server <- function(input, output) {
       pp = p + geom_histogram(aes(y = ..density..), 
                               breaks = bar, 
                               fill = '#75AADB',
-                              colour = "black", 
-                              alpha = 0.32) +
-        geom_density(kernel = "gaussian", 
-                     col = "brown3",
-                     linetype = 1,
-                     size = 0.75) +
-        
-        theme_bw()
+                              colour = "white", 
+                              alpha = 0.4) +
+        geom_line(aes(y = ..density..), stat = 'density', colour = "brown3") + 
+        theme_bw()     
       
     }
     
-  }) # Solo en RLS
+  }) 
   
   
   
@@ -1903,24 +2150,32 @@ server <- function(input, output) {
   
   output$plotdens = renderPlotly({
     
-    if(input$aplicarQuan){
+    x = ggplot(datos(), aes(get(input$varesc))) + xlab(input$varesc) 
+    
+    if(class(datos()[,input$varesc]) == "numeric"){
       
-      if(class(datos()[,input$varesc]) == "numeric"){
-        
-        x = ggplot(datos(), aes(get(input$varesc))) + xlab(input$varesc) + ylab("Densidad")
+      x + geom_density(fill = '#75AADB', alpha = 0.32)  + ylab("Densidad") + theme_bw()
+      
+      if(input$aplicarQuan > 0){
         
         x + geom_density(fill = '#75AADB', alpha = 0.32)  + 
           geom_vline(aes(xintercept = mean(datos()[,input$varesc])), col = "red", size = 0.75) +  
           geom_vline(aes(xintercept = quantile(datos()[,input$varesc])[2]), linetype = 2, col = "springgreen4", size = 0.75) +
           geom_vline(aes(xintercept = quantile(datos()[,input$varesc])[4]), linetype = 2, col = "springgreen4", size = 0.75) +
           geom_vline(aes(xintercept = quantile(datos()[,input$varesc])[3]), linetype = 2, col = "springgreen4", size = 0.75) +
-          theme_bw()}else{NULL}
+          ylab("Densidad") +
+          theme_bw()
+        
+      }else{
+        
+        x + geom_density(fill = '#75AADB', alpha = 0.32)  + ylab("Densidad") + theme_bw()
+        
+      }
       
     }else{
       
-      if(class(datos()[,input$varesc]) == "numeric"){
-        x = ggplot(datos(), aes(get(input$varesc))) + xlab(input$varesc) + ylab("Densidad")
-        x + geom_density(fill = '#75AADB', alpha = 0.32)  + theme_bw()}else{NULL}
+      x + stat_count(stat = 'identity', width = 0.10, fill = '#75AADB', alpha = 0.75) + ylab("Distribucion") + theme_bw()
+      
     }
     
   })
@@ -1934,11 +2189,11 @@ server <- function(input, output) {
   })
   
   bar = reactive({
-  
+    
     cs = nclass.Sturges(datos()[,input$varescHist])
     
     return(cs)
-
+    
   })
   output$controles5 = renderUI({
     
@@ -1999,48 +2254,22 @@ server <- function(input, output) {
     
   })
   
-  output$var1 = renderUI({
-    
-    selectInput("selectvar1", "Seleccionar variable X:",
-                choices = names(datos()),
-                selected = 1)
-  })
-  output$var2 = renderUI({
-    
-    selectInput("selectvar2", "Seleccionar variable Y:",
-                choices = names(datos()),
-                selected = 1)
-  })
-  
-  
-  output$cortest = renderPrint({
-    
-    cor.test(datos()[,input$selectvar1],datos()[,input$selectvar2])    
-    
-  })
-  
-  output$ttest = renderPrint({
-    
-    t.test(datos()[,input$selectvar1],datos()[,input$selectvar2])    
-    
-  })
-  
-  output$vartest = renderPrint({
-    
-    var.test(datos()[,input$selectvar1],datos()[,input$selectvar2])    
-    
-  })
   
   
   
-  # Analisis cluster
-
-      # Cluster jerarquico
-
+  ### ANALISIS CLUSTER ###
+  
+  ### Cluster jerarquico ###
+  
   datos_noNum = reactive({
     
-    datos.noNum = datos()[,sapply(datos(), class) != "numeric"]
-    datos.noNum
+    datos.noNu = datos()[,sapply(datos(), class) != "numeric"]
+    
+    nombres = c(names(datos()[,sapply(datos(), class) != "numeric"]))
+    
+    colnames(datos.noNu) = nombres
+    
+    return(datos.noNu)
     
   }) # Datos con variables no numericas
   
@@ -2053,7 +2282,12 @@ server <- function(input, output) {
   datos_cj = reactive({
     
     datosCJ = datos()[,sapply(datos(), class) == "numeric"]
-    datosCJ; rownames(datosCJ) = c(datos()[,1]); datosCJ
+    
+    nombres = c(names(datos()[,sapply(datos(), class) == "numeric"]))
+    
+    colnames(datosCJ) = nombres
+    
+    return(datosCJ)
     
   }) # Datos con variables numericas
   
@@ -2071,24 +2305,38 @@ server <- function(input, output) {
     grupo = cutree(fit, k = input$usa_agrupamientos) 
     grupo = data.frame(grupo) 
     
-    if(input$dibujar_agrup == T){t(grupo)}else{print("A la espera de seleccionar agrupamientos")}
+    if(input$dibujar_agrup != T){
+      
+      print("A la espera de seleccionar agrupamientos")
+      
+    }else{
+      
+      t(grupo)
+      
+    }
     
   }) # Visualizador matriz de distancias
   
   output$cluster_jer = renderPlot({
     
     fit = hclust(distancia(), method = input$usa_cluster)
-    plot(fit, cex = 0.7) 
+    plot(fit, labels = datos()[,input$varChar], cex = 1.2) 
     
     if(input$dibujar_agrup == T){
       
-      plot(fit,  cex = 0.7); 
-      rect.hclust(fit, k = input$usa_agrupamientos, border="red")}else{plot(fit,  cex = 0.7)}
+      plot(fit, labels = datos()[,input$varChar], cex = 1.2); 
+      rect.hclust(fit, k = input$usa_agrupamientos, border = "red")
+      
+    }else{
+      
+      plot(fit, labels = datos()[,input$varChar], cex = 1.2) 
+      
+    }
     
   }) # Cluster jerarquico
   
   
-      # Cluster kmeans
+  ### Cluster kmeans ###
   
   output$varX_clus = renderUI({
     selectInput("varXclus", "Seleccionar variable X:",
@@ -2149,14 +2397,14 @@ server <- function(input, output) {
       
       return(km2)
       
-      }else{
-        
+    }else{
+      
       km2 = kmeans(datos_cj(), centers = input$num_centros, nstart = input$nstart, 
                    algorithm = input$usa_algoritmo)
-        
+      
       return(km2)
-        
-        }
+      
+    }
     
   })
   
@@ -2183,13 +2431,13 @@ server <- function(input, output) {
       }
       
     }
-
+    
   }) 
   
   
   # REGRESION LINEAL MULTIPLE Y CORRELACION
   
-        # CORRELACION
+  # CORRELACION
   
   output$vxCorr = renderUI({
     selectInput("vx_Corr", "Seleccionar variable X:",
@@ -2197,6 +2445,7 @@ server <- function(input, output) {
                 selected = 1)
   }) 
   output$vyCorr = renderUI({
+    
     selectInput("vy_Corr", "Seleccionar variable Y:",
                 choices = names(datos_cj()),
                 selected = 1)
@@ -2321,18 +2570,16 @@ server <- function(input, output) {
     
     p = ggplot(residRLM(), aes(residRLM()[,1])) + xlab("Residuos") + ylab("Densidad")
     
-     p + geom_histogram(aes(y = ..density..), 
-                            breaks = bar, 
-                            fill = '#75AADB',
-                            colour = "black", 
-                            alpha = 0.32) +
+    p + geom_histogram(aes(y = ..density..), 
+                       breaks = bar, 
+                       fill = '#75AADB',
+                       colour = "white", 
+                       alpha = 0.4) +
       
-      geom_density(kernel = "gaussian", 
-                   col = "brown3",
-                   linetype = 1,
-                   size = 0.75) + theme_bw()          
-      
-      
+      geom_line(aes(y = ..density..), stat = 'density', colour = "brown3") + 
+      theme_bw()          
+    
+    
     
   })
   
